@@ -1,4 +1,4 @@
-import { Link, usePage } from "@inertiajs/react";
+import { Link, usePage, router } from "@inertiajs/react";
 import {
   LayoutDashboard, ShoppingCart, Pill, Boxes, Truck, Building2, UserCircle,
   Receipt, BookOpen, BarChart2, Users as UsersIcon, Bell, Settings, LogOut, FlaskConical,
@@ -21,8 +21,14 @@ const navItems: NavItem[] = [
   { id: "settings", label: "Settings", href: "/settings", icon: <Settings size={16} /> },
 ];
 
+interface PageProps {
+  auth: { user: { name: string; email: string } | null };
+  [key: string]: unknown;
+}
+
 export function Sidebar() {
-  const { url } = usePage();
+  const { url, props } = usePage<PageProps>();
+  const user = props.auth?.user;
 
   return (
     <aside className="w-56 shrink-0 bg-sidebar border-r border-sidebar-border flex flex-col h-screen sticky top-0">
@@ -63,12 +69,12 @@ export function Sidebar() {
       </nav>
       <div className="px-4 py-3 border-t border-sidebar-border">
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xs font-semibold">A</div>
+          <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xs font-semibold">{user?.name?.charAt(0) ?? "A"}</div>
           <div className="flex-1 min-w-0">
-            <div className="text-xs font-medium text-sidebar-foreground truncate">Admin User</div>
-            <div className="text-xs text-muted-foreground">Owner</div>
+            <div className="text-xs font-medium text-sidebar-foreground truncate">{user?.name ?? "Admin User"}</div>
+            <div className="text-xs text-muted-foreground truncate">{user?.email ?? ""}</div>
           </div>
-          <button className="text-muted-foreground hover:text-foreground"><LogOut size={14} /></button>
+          <button onClick={() => router.post("/logout")} className="text-muted-foreground hover:text-foreground"><LogOut size={14} /></button>
         </div>
       </div>
     </aside>
