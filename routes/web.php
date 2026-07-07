@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\MedicineController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -14,21 +15,8 @@ Route::middleware('auth')->group(function () {
         return Inertia::render('POS');
     });
 
-    Route::get('/medicines', function () {
-        return Inertia::render('Medicines');
-    });
-
-    Route::get('/medicines/add', function () {
-        return Inertia::render('AddMedicine');
-    });
-
-    Route::get('/medicines/{id}/edit', function (int $id) {
-        return Inertia::render('AddMedicine', ['id' => $id]);
-    });
-
-    Route::get('/medicines/{id}', function (int $id) {
-        return Inertia::render('MedicineDetail', ['id' => $id]);
-    });
+    Route::get('/medicines/add', [MedicineController::class, 'create'])->name('medicines.create');
+    Route::resource('medicines', MedicineController::class)->except(['create'])->parameters(['medicines' => 'medicine']);
 
     Route::get('/inventory', function () {
         return Inertia::render('Inventory');

@@ -1,10 +1,12 @@
-export interface Medicine {
+// NOTE: Medicines module now uses live data from the database (see @/types Medicine).
+// This mock array remains only for modules not yet wired to the backend (POS, Inventory, Reports, Purchases).
+export interface MedicineMock {
   id: number; name: string; generic: string; brand: string; category: string; manufacturer: string;
   strength: string; form: string; unit: string; sku: string; batch: string; expiry: string;
   stock: number; reorder: number; purchase: number; selling: number; tax: number; status: string;
 }
 
-export const medicines: Medicine[] = [
+export const medicines: MedicineMock[] = [
   { id: 1, name: "Amoxicillin 500mg", generic: "Amoxicillin", brand: "Moxilin", category: "Antibiotics", manufacturer: "Sun Pharma", strength: "500mg", form: "Capsule", unit: "Strip", sku: "MED001", batch: "BT2401", expiry: "2026-06", stock: 240, reorder: 50, purchase: 48.00, selling: 72.00, tax: 12, status: "In Stock" },
   { id: 2, name: "Paracetamol 650mg", generic: "Paracetamol", brand: "Calpol", category: "Analgesics", manufacturer: "GSK", strength: "650mg", form: "Tablet", unit: "Strip", sku: "MED002", batch: "BT2402", expiry: "2025-12", stock: 12, reorder: 30, purchase: 18.00, selling: 28.00, tax: 5, status: "Low Stock" },
   { id: 3, name: "Cetirizine 10mg", generic: "Cetirizine", brand: "Zyrtec", category: "Antihistamines", manufacturer: "UCB", strength: "10mg", form: "Tablet", unit: "Strip", sku: "MED003", batch: "BT2403", expiry: "2025-08", stock: 0, reorder: 20, purchase: 22.00, selling: 35.00, tax: 12, status: "Out of Stock" },

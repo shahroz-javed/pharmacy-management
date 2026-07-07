@@ -20,5 +20,7 @@ class DatabaseSeeder extends Seeder
             'email' => 'admin@pharmapro.in',
             'password' => bcrypt('admin123'),
         ]);
+
+        $this->call(MedicineSeeder::class);
     }
 }

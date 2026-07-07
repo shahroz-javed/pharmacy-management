@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "@inertiajs/react";
+import { Link, router } from "@inertiajs/react";
 import {
   Upload, Download, Plus, Filter, Pill, Eye, Edit2, Trash2, ChevronLeft, ChevronRight, AlertTriangle,
 } from "lucide-react";
@@ -14,24 +14,42 @@ import { Badge } from "@/Components/ui/Badge";
 import { EmptyState } from "@/Components/ui/EmptyState";
 import { Modal } from "@/Components/ui/Modal";
 import { Toast } from "@/Components/ui/Toast";
-import { medicines } from "@/mockData";
+import type { Medicine } from "@/types";
 
-export default function Medicines() {
-  const [search, setSearch] = useState("");
-  const [category, setCategory] = useState("All");
-  const [statusFilter, setStatusFilter] = useState("All");
+interface Props {
+  medicines: Medicine[];
+  categories: string[];
+  filters: { search?: string; category?: string; status?: string };
+}
+
+export default function Medicines({ medicines, categories, filters }: Props) {
+  const [search, setSearch] = useState(filters.search ?? "");
+  const [category, setCategory] = useState(filters.category ?? "All");
+  const [statusFilter, setStatusFilter] = useState(filters.status ?? "All");
   const [deleteModal, setDeleteModal] = useState(false);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
 
-  const filtered = medicines.filter(m => {
-    const matchSearch = m.name.toLowerCase().includes(search.toLowerCase()) || m.sku.toLowerCase().includes(search.toLowerCase());
-    const matchCat = category === "All" || m.category === category;
-    const matchStatus = statusFilter === "All" || m.status === statusFilter;
-    return matchSearch && matchCat && matchStatus;
-  });
+  const applyFilters = (next: Partial<{ search: string; category: string; status: string }>) => {
+    const params = {
+      search: next.search ?? search,
+      category: next.category ?? category,
+      status: next.status ?? statusFilter,
+    };
+    router.get("/medicines", params, { preserveState: true, replace: true });
+  };
 
-  const cats = ["All", ...Array.from(new Set(medicines.map(m => m.category)))];
+  const cats = ["All", ...categories];
+
+  const confirmDelete = () => {
+    if (selectedId === null) return;
+    router.delete(`/medicines/${selectedId}`, {
+      preserveScroll: true,
+      onSuccess: () => setToast({ msg: "Medicine deleted successfully", type: "success" }),
+      onError: () => setToast({ msg: "Failed to delete medicine", type: "error" }),
+      onFinish: () => setDeleteModal(false),
+    });
+  };
 
   return (
     <AppLayout notifCount={3}>
@@ -51,46 +69,62 @@ export default function Medicines() {
           }
         />
         <Toolbar>
-          <SearchInput placeholder="Search by name, SKU, batch…" value={search} onChange={setSearch} />
-          <select value={category} onChange={e => setCategory(e.target.value)} className="px-3 py-2 text-sm border border-border rounded-md bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-ring/20">
+          <SearchInput
+            placeholder="Search by name, SKU, batch…"
+            value={search}
+            onChange={(v) => { setSearch(v); applyFilters({ search: v }); }}
+          />
+          <select
+            value={category}
+            onChange={e => { setCategory(e.target.value); applyFilters({ category: e.target.value }); }}
+            className="px-3 py-2 text-sm border border-border rounded-md bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-ring/20"
+          >
             {cats.map(c => <option key={c}>{c}</option>)}
           </select>
-          <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="px-3 py-2 text-sm border border-border rounded-md bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-ring/20">
+          <select
+            value={statusFilter}
+            onChange={e => { setStatusFilter(e.target.value); applyFilters({ status: e.target.value }); }}
+            className="px-3 py-2 text-sm border border-border rounded-md bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-ring/20"
+          >
             {["All", "In Stock", "Low Stock", "Out of Stock"].map(s => <option key={s}>{s}</option>)}
           </select>
           <Btn variant="outline" size="sm"><Filter size={13} />More Filters</Btn>
-          <div className="ml-auto text-xs text-muted-foreground">{filtered.length} results</div>
+          <div className="ml-auto text-xs text-muted-foreground">{medicines.length} results</div>
         </Toolbar>
 
         <Card>
           <table className="w-full">
             <TableHeader cols={["", "Medicine", "Category", "Batch / Expiry", "Stock", "Reorder", "Purchase", "Selling", "Status", ""]} />
             <tbody>
-              {filtered.length === 0 ? (
+              {medicines.length === 0 ? (
                 <tr><td colSpan={10}><EmptyState icon={<Pill size={40} />} title="No medicines found" description="Try adjusting your search or filters" /></td></tr>
-              ) : filtered.map(m => (
+              ) : medicines.map(m => (
                 <tr key={m.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors group">
                   <td className="px-4 py-2.5"><input type="checkbox" className="rounded border-border" /></td>
                   <td className="px-4 py-2.5">
                     <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-md bg-blue-50 dark:bg-blue-950/30 flex items-center justify-center shrink-0">
-                        <Pill size={14} className="text-blue-600" />
+                      <div className="w-8 h-8 rounded-md bg-blue-50 dark:bg-blue-950/30 flex items-center justify-center shrink-0 overflow-hidden">
+                        {m.image_path ? (
+                          <img src={`/storage/${m.image_path}`} alt={m.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <Pill size={14} className="text-blue-600" />
+                        )}
                       </div>
                       <div>
                         <div className="text-sm font-medium text-foreground">{m.name}</div>
-                        <div className="text-xs text-muted-foreground font-mono">{m.sku} · {m.form}</div>
+                        <div className="text-xs text-muted-foreground font-mono">{m.sku} · {m.dosage_form}</div>
                       </div>
                     </div>
                   </td>
                   <td className="px-4 py-2.5"><span className="text-xs text-muted-foreground">{m.category}</span></td>
                   <td className="px-4 py-2.5">
-                    <div className="text-xs font-mono text-foreground">{m.batch}</div>
-                    <div className="text-xs text-muted-foreground">{m.expiry}</div>
+                    <div className="text-xs font-mono text-foreground">{m.batch_number}</div>
+                    <div className="text-xs text-muted-foreground">{m.expiry_date}</div>
                   </td>
                   <td className="px-4 py-2.5 text-sm font-mono font-medium text-foreground">{m.stock}</td>
-                  <td className="px-4 py-2.5 text-xs font-mono text-muted-foreground">{m.reorder}</td>
-                  <td className="px-4 py-2.5 text-xs font-mono text-foreground">₹{m.purchase.toFixed(2)}</td>
-                  <td className="px-4 py-2.5 text-xs font-mono font-medium text-foreground">₹{m.selling.toFixed(2)}</td>
+                  <td className="px-4 py-2.5 text-xs font-mono text-muted-foreground">{m.reorder_level}</td>
+                  <td className="px-4 py-2.5 text-xs font-mono text-foreground">₹{Number(m.purchase_price).toFixed(2)}</td>
+                  <td className="px-4 py-2.5 text-xs font-mono font-medium text-foreground">₹{Number(m.selling_price).toFixed(2)}</td>
                   <td className="px-4 py-2.5"><Badge status={m.status} /></td>
                   <td className="px-4 py-2.5">
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -103,9 +137,9 @@ export default function Medicines() {
               ))}
             </tbody>
           </table>
-          {filtered.length > 0 && (
+          {medicines.length > 0 && (
             <div className="px-4 py-3 border-t border-border flex items-center justify-between">
-              <span className="text-xs text-muted-foreground">Showing 1–{filtered.length} of {filtered.length}</span>
+              <span className="text-xs text-muted-foreground">Showing 1–{medicines.length} of {medicines.length}</span>
               <div className="flex items-center gap-1">
                 <button className="px-2.5 py-1.5 text-xs border border-border rounded hover:bg-muted disabled:opacity-40"><ChevronLeft size={12} /></button>
                 <button className="px-2.5 py-1.5 text-xs border border-border rounded bg-primary text-primary-foreground">1</button>
@@ -126,7 +160,7 @@ export default function Medicines() {
             </div>
             <div className="flex justify-end gap-2">
               <Btn variant="outline" onClick={() => setDeleteModal(false)}>Cancel</Btn>
-              <Btn variant="danger" onClick={() => { setDeleteModal(false); setToast({ msg: "Medicine deleted successfully", type: "success" }); }}>Delete Medicine</Btn>
+              <Btn variant="danger" onClick={confirmDelete}>Delete Medicine</Btn>
             </div>
           </div>
         </Modal>
