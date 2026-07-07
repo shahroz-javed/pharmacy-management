@@ -39,10 +39,12 @@ Renders `Dashboard.tsx` with data from `mockData.ts`. No controller or DB-backed
 
 Backed by `App\Models\Medicine`, `App\Http\Controllers\MedicineController`, `medicines` table (migration `2026_07_07_082814_create_medicines_table`). Supports search/category/status filtering, create/edit with image upload, delete, and auto-computed stock status (In Stock / Low Stock / Out of Stock). Covered by [tests/Feature/MedicineTest.php](tests/Feature/MedicineTest.php).
 
-### 4. Inventory Management — Static (UI only)
-- Current Stock, Stock Ledger, Stock Movement, Stock Adjustment, Damaged Stock, Expired Stock, Returned Stock, Transfer Stock, Inventory Audit
+### 4. Inventory Management — Dynamic
+- Current Stock, Stock Ledger, Stock Adjustment, Damaged Stock, Expired Stock
 
-Renders `Inventory.tsx` from `mockData.ts`. No dedicated model/table yet — will need to read/write against `medicines.stock` plus a stock-movement ledger table.
+Backed by `App\Models\StockMovement`, `App\Http\Controllers\InventoryController`, `stock_movements` table (migration `2026_07_07_084624_create_stock_movements_table`). Every movement (Purchase, Sale, Adjustment, Damaged, Expired, Returned, Transfer — see `App\Enums\StockMovementType`) is written as one ledger row via `Medicine::applyStockMovement()`, which locks the row, applies the delta, and rejects adjustments that would push stock negative. The Current Stock, Stock Ledger, Damaged, and Expired tabs all read this same ledger filtered by type; the Adjustment modal supports Add Stock / Remove Stock / Damage Write-off / Expired Write-off. Covered by [tests/Feature/InventoryTest.php](tests/Feature/InventoryTest.php).
+
+Not yet implemented: **Returned Stock** and **Transfer Stock** (no return/transfer UI or trigger wired up yet, though the ledger type exists) and **Inventory Audit** (no audit/reconciliation flow yet).
 
 ### 5. Purchase Management — Static (UI only)
 - Purchase Orders, Suppliers, Receive Inventory, Purchase History, Purchase Invoice
@@ -96,4 +98,4 @@ Renders `SettingsPage.tsx` from mock data. No settings table/controller yet.
 
 ## Suggested order for making remaining modules dynamic
 
-Inventory and Purchases naturally extend the `medicines` table already in place, so they're the lowest-friction next steps, followed by Suppliers/Customers (needed by Purchases/Sales/POS), then Sales/POS together (since POS creates Sales), then Prescriptions, Reports (reads across the above), and finally Users/Roles and Settings.
+Purchases is the natural next step (it will create `Purchase` stock movements against the same ledger), followed by Suppliers/Customers (needed by Purchases/Sales/POS), then Sales/POS together (since POS creates Sales and `Sale` stock movements), then Prescriptions, Reports (reads across the above), and finally Users/Roles and Settings.

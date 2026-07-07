@@ -18,7 +18,7 @@ class DatabaseSeeder extends Seeder
         User::factory()->create([
             'name' => 'Admin User',
             'email' => 'admin@pharmapro.in',
-            'password' => bcrypt('admin123'),
+            'password' => bcrypt('aszx1234'),
         ]);
 
         $this->call(MedicineSeeder::class);

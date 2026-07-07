@@ -2,8 +2,12 @@
 
 namespace App\Models;
 
+use App\Enums\StockMovementType;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\DB;
+use InvalidArgumentException;
 
 #[Fillable([
     'generic_name', 'brand_name', 'category', 'manufacturer', 'strength', 'dosage_form', 'unit',
@@ -42,5 +46,49 @@ class Medicine extends Model
     public function getNameAttribute(): string
     {
         return trim("{$this->brand_name} {$this->strength}");
+    }
+
+    public function stockMovements(): HasMany
+    {
+        return $this->hasMany(StockMovement::class);
+    }
+
+    /**
+     * Atomically adjust stock and record the movement in the ledger.
+     */
+    public function applyStockMovement(
+        StockMovementType $type,
+        int $quantityIn,
+        int $quantityOut,
+        ?int $userId = null,
+        ?string $reference = null,
+        ?string $reason = null,
+    ): StockMovement {
+        return DB::transaction(function () use ($type, $quantityIn, $quantityOut, $userId, $reference, $reason) {
+            $medicine = static::query()->lockForUpdate()->findOrFail($this->id);
+
+            $newStock = $medicine->stock + $quantityIn - $quantityOut;
+
+            if ($newStock < 0) {
+                throw new InvalidArgumentException("Insufficient stock for {$medicine->name}: has {$medicine->stock}, needs {$quantityOut}.");
+            }
+
+            $medicine->stock = $newStock;
+            $medicine->save();
+
+            $movement = $medicine->stockMovements()->create([
+                'user_id' => $userId,
+                'type' => $type,
+                'quantity_in' => $quantityIn,
+                'quantity_out' => $quantityOut,
+                'balance_after' => $newStock,
+                'reference' => $reference,
+                'reason' => $reason,
+            ]);
+
+            $this->setRawAttributes($medicine->getAttributes());
+
+            return $movement;
+        });
     }
 }

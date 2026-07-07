@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\MedicineController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -18,9 +19,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/medicines/add', [MedicineController::class, 'create'])->name('medicines.create');
     Route::resource('medicines', MedicineController::class)->except(['create'])->parameters(['medicines' => 'medicine']);
 
-    Route::get('/inventory', function () {
-        return Inertia::render('Inventory');
-    });
+    Route::get('/inventory', [InventoryController::class, 'index'])->name('inventory.index');
+    Route::post('/inventory/adjustments', [InventoryController::class, 'storeAdjustment'])->name('inventory.adjustments.store');
 
     Route::get('/purchases', function () {
         return Inertia::render('Purchases');
