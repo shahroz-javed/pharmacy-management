@@ -13,14 +13,14 @@ export default function MedicineDetail({ medicine: m }: { medicine: Medicine }) 
 
   return (
     <AppLayout notifCount={3}>
-      <div className="p-5 max-w-4xl">
+      <div className="p-5 max-w-4xl print:hidden">
         <div className="flex items-center gap-2 mb-5">
           <Link href="/medicines" className="text-muted-foreground hover:text-foreground"><ChevronLeft size={18} /></Link>
           <h1 className="text-lg font-semibold text-foreground">{m.name}</h1>
           <Badge status={m.status} />
           <div className="ml-auto flex gap-2">
             <Link href={`/medicines/${m.id}/edit`}><Btn variant="outline" size="sm"><Edit2 size={13} />Edit</Btn></Link>
-            <Btn variant="outline" size="sm"><Printer size={13} />Print Label</Btn>
+            <Btn variant="outline" size="sm" onClick={() => window.print()}><Printer size={13} />Print Label</Btn>
           </div>
         </div>
         <div className="grid grid-cols-3 gap-4">
@@ -48,6 +48,9 @@ export default function MedicineDetail({ medicine: m }: { medicine: Medicine }) 
                 <div><span className="text-xs text-muted-foreground block mb-0.5">Purchase Price</span><span className="font-mono font-semibold text-foreground">₹{purchase.toFixed(2)}</span></div>
                 <div><span className="text-xs text-muted-foreground block mb-0.5">Selling Price</span><span className="font-mono font-semibold text-primary">₹{selling.toFixed(2)}</span></div>
                 <div><span className="text-xs text-muted-foreground block mb-0.5">Margin</span><span className="font-mono font-semibold text-emerald-600">{margin}%</span></div>
+                {m.mrp && <div><span className="text-xs text-muted-foreground block mb-0.5">MRP</span><span className="font-mono font-semibold text-foreground">₹{Number(m.mrp).toFixed(2)}</span></div>}
+                {m.wholesale_price && <div><span className="text-xs text-muted-foreground block mb-0.5">Wholesale Price</span><span className="font-mono font-semibold text-foreground">₹{Number(m.wholesale_price).toFixed(2)}</span></div>}
+                <div><span className="text-xs text-muted-foreground block mb-0.5">Discount</span><span className="font-mono font-semibold text-foreground">{Number(m.discount).toFixed(1)}%</span></div>
               </div>
             </Card>
           </div>
@@ -70,6 +73,21 @@ export default function MedicineDetail({ medicine: m }: { medicine: Medicine }) 
               </div>
             </Card>
           </div>
+        </div>
+      </div>
+
+      {/* Printable label — only rendered visually when printing */}
+      <div className="hidden print:block p-6">
+        <div className="border-2 border-black rounded-md p-4 w-80 font-mono">
+          <div className="text-base font-bold mb-1">{m.name}</div>
+          <div className="text-xs mb-2">{m.generic_name}</div>
+          <div className="text-xs space-y-0.5">
+            <div>SKU: {m.sku}</div>
+            <div>Batch: {m.batch_number}</div>
+            <div>Expiry: {m.expiry_date}</div>
+            {m.manufacturer && <div>Mfr: {m.manufacturer}</div>}
+          </div>
+          <div className="text-lg font-bold mt-2">₹{selling.toFixed(2)}</div>
         </div>
       </div>
     </AppLayout>

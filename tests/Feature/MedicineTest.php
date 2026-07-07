@@ -121,6 +121,46 @@ class MedicineTest extends TestCase
         \Illuminate\Support\Facades\Storage::disk('public')->assertMissing($updated->image_path);
     }
 
+    public function test_edit_page_returns_form_ready_expiry_date_and_discount(): void
+    {
+        $user = User::factory()->create();
+        $medicine = Medicine::create([
+            'generic_name' => 'Paracetamol', 'brand_name' => 'Calpol', 'category' => 'Analgesics',
+            'sku' => 'MED150', 'purchase_price' => 18, 'selling_price' => 28, 'tax' => 5,
+            'discount' => 15, 'batch_number' => 'BT1', 'expiry_date' => '2027-03-15',
+            'stock' => 10, 'reorder_level' => 5,
+        ]);
+
+        // expiry_date must come back as a plain YYYY-MM-DD string so <input type="date">
+        // can preselect it — anything with a time/timezone suffix renders blank in the browser.
+        $this->actingAs($user)
+            ->get("/medicines/{$medicine->id}/edit")
+            ->assertInertia(fn ($page) => $page
+                ->where('medicine.expiry_date', '2027-03-15')
+                ->where('medicine.discount', '15.00')
+            );
+    }
+
+    public function test_discount_persists_through_update(): void
+    {
+        $user = User::factory()->create();
+        $medicine = Medicine::create([
+            'generic_name' => 'Paracetamol', 'brand_name' => 'Calpol', 'category' => 'Analgesics',
+            'sku' => 'MED151', 'purchase_price' => 18, 'selling_price' => 28, 'tax' => 5,
+            'batch_number' => 'BT1', 'expiry_date' => '2027-03-15', 'stock' => 10, 'reorder_level' => 5,
+        ]);
+
+        $this->actingAs($user)->post("/medicines/{$medicine->id}", [
+            '_method' => 'put',
+            'generic_name' => 'Paracetamol', 'brand_name' => 'Calpol', 'category' => 'Analgesics',
+            'sku' => 'MED151', 'purchase_price' => 18, 'selling_price' => 28, 'tax' => 5,
+            'discount' => 20, 'batch_number' => 'BT1', 'expiry_date' => '2027-03-15',
+            'stock' => 10, 'reorder_level' => 5,
+        ])->assertRedirect('/medicines');
+
+        $this->assertEquals(20, $medicine->fresh()->discount);
+    }
+
     public function test_sku_must_be_unique(): void
     {
         $user = User::factory()->create();

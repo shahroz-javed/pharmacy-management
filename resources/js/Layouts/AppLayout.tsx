@@ -11,11 +11,11 @@ export function AppLayout({ children, notifCount = 0 }: { children: React.ReactN
   }, [theme]);
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background">
+    <div className="flex h-screen overflow-hidden bg-background print:h-auto print:overflow-visible">
       <Sidebar />
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden print:overflow-visible">
         <TopBar theme={theme} onToggleTheme={() => setTheme(t => t === "light" ? "dark" : "light")} notifCount={notifCount} />
-        <main className="flex-1 overflow-y-auto">
+        <main className="flex-1 overflow-y-auto print:overflow-visible">
           {children}
         </main>
       </div>

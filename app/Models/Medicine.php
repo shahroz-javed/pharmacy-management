@@ -39,7 +39,7 @@ class Medicine extends Model
             'tax' => 'decimal:2',
             'wholesale_price' => 'decimal:2',
             'discount' => 'decimal:2',
-            'expiry_date' => 'date',
+            'expiry_date' => 'date:Y-m-d',
         ];
     }
 
@@ -63,8 +63,10 @@ class Medicine extends Model
         ?int $userId = null,
         ?string $reference = null,
         ?string $reason = null,
+        ?string $fromLocation = null,
+        ?string $toLocation = null,
     ): StockMovement {
-        return DB::transaction(function () use ($type, $quantityIn, $quantityOut, $userId, $reference, $reason) {
+        return DB::transaction(function () use ($type, $quantityIn, $quantityOut, $userId, $reference, $reason, $fromLocation, $toLocation) {
             $medicine = static::query()->lockForUpdate()->findOrFail($this->id);
 
             $newStock = $medicine->stock + $quantityIn - $quantityOut;
@@ -84,6 +86,8 @@ class Medicine extends Model
                 'balance_after' => $newStock,
                 'reference' => $reference,
                 'reason' => $reason,
+                'from_location' => $fromLocation,
+                'to_location' => $toLocation,
             ]);
 
             $this->setRawAttributes($medicine->getAttributes());

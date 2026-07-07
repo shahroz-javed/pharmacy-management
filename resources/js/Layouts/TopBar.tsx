@@ -6,7 +6,7 @@ export function TopBar({ theme, onToggleTheme, notifCount }: {
   theme: Theme; onToggleTheme: () => void; notifCount: number;
 }) {
   return (
-    <header className="h-12 border-b border-border bg-card flex items-center justify-between px-5 shrink-0 sticky top-0 z-10">
+    <header className="h-12 border-b border-border bg-card flex items-center justify-between px-5 shrink-0 sticky top-0 z-10 print:hidden">
       <div className="relative">
         <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
         <input
