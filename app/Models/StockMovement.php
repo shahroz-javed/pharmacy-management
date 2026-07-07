@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['medicine_id', 'user_id', 'type', 'quantity_in', 'quantity_out', 'balance_after', 'reference', 'reason'])]
+#[Fillable(['medicine_id', 'user_id', 'type', 'quantity_in', 'quantity_out', 'balance_after', 'reference', 'reason', 'from_location', 'to_location'])]
 class StockMovement extends Model
 {
     protected function casts(): array

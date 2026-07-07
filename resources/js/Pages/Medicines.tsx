@@ -127,7 +127,7 @@ export default function Medicines({ medicines, categories, filters }: Props) {
                   <td className="px-4 py-2.5 text-xs font-mono font-medium text-foreground">₹{Number(m.selling_price).toFixed(2)}</td>
                   <td className="px-4 py-2.5"><Badge status={m.status} /></td>
                   <td className="px-4 py-2.5">
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex items-center gap-1">
                       <Link href={`/medicines/${m.id}`} className="p-1.5 hover:bg-muted rounded text-muted-foreground hover:text-foreground"><Eye size={13} /></Link>
                       <Link href={`/medicines/${m.id}/edit`} className="p-1.5 hover:bg-muted rounded text-muted-foreground hover:text-foreground"><Edit2 size={13} /></Link>
                       <button onClick={() => { setSelectedId(m.id); setDeleteModal(true); }} className="p-1.5 hover:bg-red-50 rounded text-muted-foreground hover:text-red-600"><Trash2 size={13} /></button>

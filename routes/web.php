@@ -21,6 +21,9 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/inventory', [InventoryController::class, 'index'])->name('inventory.index');
     Route::post('/inventory/adjustments', [InventoryController::class, 'storeAdjustment'])->name('inventory.adjustments.store');
+    Route::post('/inventory/returns', [InventoryController::class, 'storeReturn'])->name('inventory.returns.store');
+    Route::post('/inventory/transfers', [InventoryController::class, 'storeTransfer'])->name('inventory.transfers.store');
+    Route::post('/inventory/audits', [InventoryController::class, 'storeAudit'])->name('inventory.audits.store');
 
     Route::get('/purchases', function () {
         return Inertia::render('Purchases');

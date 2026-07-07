@@ -66,6 +66,8 @@ export interface StockMovement {
   balance_after: number;
   reference: string | null;
   reason: string | null;
+  from_location: string | null;
+  to_location: string | null;
   created_at: string;
   medicine: Pick<Medicine, "id" | "generic_name" | "brand_name" | "strength" | "sku"> & { name?: string };
   user: { id: number; name: string } | null;

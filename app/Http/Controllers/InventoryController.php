@@ -3,7 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Enums\StockMovementType;
+use App\Http\Requests\StoreInventoryAuditRequest;
 use App\Http\Requests\StoreStockAdjustmentRequest;
+use App\Http\Requests\StoreStockReturnRequest;
+use App\Http\Requests\StoreStockTransferRequest;
 use App\Models\Medicine;
 use App\Models\StockMovement;
 use Illuminate\Http\RedirectResponse;
@@ -64,21 +67,100 @@ class InventoryController extends Controller
             'Expired Write-off' => [StockMovementType::Expired, 0, (int) $data['quantity']],
         };
 
-        if ($quantityOut > $medicine->stock) {
-            throw ValidationException::withMessages([
-                'quantity' => "Only {$medicine->stock} units of {$medicine->name} are in stock.",
-            ]);
-        }
+        $this->assertSufficientStock($medicine, $quantityOut);
 
         $medicine->applyStockMovement(
             type: $type,
             quantityIn: $quantityIn,
             quantityOut: $quantityOut,
             userId: $request->user()->id,
-            reference: 'ADJ-'.now()->format('ymd').'-'.str_pad((string) (StockMovement::max('id') + 1), 3, '0', STR_PAD_LEFT),
+            reference: $this->nextReference('ADJ'),
             reason: $data['reason'] ?? null,
         );
 
         return redirect()->route('inventory.index')->with('success', 'Stock adjustment saved successfully');
+    }
+
+    public function storeReturn(StoreStockReturnRequest $request): RedirectResponse
+    {
+        $data = $request->validated();
+        $medicine = Medicine::findOrFail($data['medicine_id']);
+        $quantity = (int) $data['quantity'];
+
+        [$quantityIn, $quantityOut] = $data['direction'] === 'Customer Return'
+            ? [$quantity, 0]
+            : [0, $quantity];
+
+        $this->assertSufficientStock($medicine, $quantityOut);
+
+        $medicine->applyStockMovement(
+            type: StockMovementType::Returned,
+            quantityIn: $quantityIn,
+            quantityOut: $quantityOut,
+            userId: $request->user()->id,
+            reference: $this->nextReference('RET'),
+            reason: trim($data['direction'].(($data['reason'] ?? null) ? " — {$data['reason']}" : '')),
+        );
+
+        return redirect()->route('inventory.index')->with('success', 'Stock return recorded successfully');
+    }
+
+    public function storeTransfer(StoreStockTransferRequest $request): RedirectResponse
+    {
+        $data = $request->validated();
+        $medicine = Medicine::findOrFail($data['medicine_id']);
+
+        // Transfers move stock between locations within the same store, so the
+        // net quantity on the medicine record does not change — only the ledger
+        // records where it went, since there is no separate per-location stock table.
+        $medicine->applyStockMovement(
+            type: StockMovementType::Transfer,
+            quantityIn: 0,
+            quantityOut: 0,
+            userId: $request->user()->id,
+            reference: $this->nextReference('TRF'),
+            reason: $data['reason'] ?? null,
+            fromLocation: $data['from_location'],
+            toLocation: $data['to_location'],
+        );
+
+        return redirect()->route('inventory.index')->with('success', 'Stock transfer recorded successfully');
+    }
+
+    public function storeAudit(StoreInventoryAuditRequest $request): RedirectResponse
+    {
+        $data = $request->validated();
+        $medicine = Medicine::findOrFail($data['medicine_id']);
+        $counted = (int) $data['counted_quantity'];
+        $variance = $counted - $medicine->stock;
+
+        if ($variance === 0) {
+            return redirect()->route('inventory.index')->with('success', 'Counted quantity matches system stock — no adjustment needed');
+        }
+
+        $medicine->applyStockMovement(
+            type: StockMovementType::Adjustment,
+            quantityIn: $variance > 0 ? $variance : 0,
+            quantityOut: $variance < 0 ? abs($variance) : 0,
+            userId: $request->user()->id,
+            reference: $this->nextReference('AUD'),
+            reason: trim("Inventory audit — counted {$counted}, system had {$medicine->stock}".(($data['reason'] ?? null) ? ". {$data['reason']}" : '')),
+        );
+
+        return redirect()->route('inventory.index')->with('success', 'Inventory audit applied successfully');
+    }
+
+    private function assertSufficientStock(Medicine $medicine, int $quantityOut): void
+    {
+        if ($quantityOut > $medicine->stock) {
+            throw ValidationException::withMessages([
+                'quantity' => "Only {$medicine->stock} units of {$medicine->name} are in stock.",
+            ]);
+        }
+    }
+
+    private function nextReference(string $prefix): string
+    {
+        return $prefix.'-'.now()->format('ymd').'-'.str_pad((string) (StockMovement::max('id') + 1), 3, '0', STR_PAD_LEFT);
     }
 }

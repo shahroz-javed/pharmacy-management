@@ -173,4 +173,138 @@ class InventoryTest extends TestCase
             'quantity' => 0,
         ])->assertSessionHasErrors(['medicine_id', 'quantity']);
     }
+
+    public function test_customer_return_adds_stock_back(): void
+    {
+        $user = User::factory()->create();
+        $medicine = $this->makeMedicine(['stock' => 50]);
+
+        $this->actingAs($user)->post('/inventory/returns', [
+            'medicine_id' => $medicine->id,
+            'direction' => 'Customer Return',
+            'quantity' => 4,
+            'reason' => 'Wrong item sold',
+        ])->assertRedirect('/inventory');
+
+        $this->assertSame(54, $medicine->fresh()->stock);
+        $movement = StockMovement::where('medicine_id', $medicine->id)->firstOrFail();
+        $this->assertSame('Returned', $movement->type->value);
+        $this->assertSame(4, $movement->quantity_in);
+        $this->assertSame(0, $movement->quantity_out);
+    }
+
+    public function test_return_to_supplier_removes_stock(): void
+    {
+        $user = User::factory()->create();
+        $medicine = $this->makeMedicine(['stock' => 50]);
+
+        $this->actingAs($user)->post('/inventory/returns', [
+            'medicine_id' => $medicine->id,
+            'direction' => 'Return to Supplier',
+            'quantity' => 10,
+        ])->assertRedirect('/inventory');
+
+        $this->assertSame(40, $medicine->fresh()->stock);
+        $movement = StockMovement::where('medicine_id', $medicine->id)->firstOrFail();
+        $this->assertSame('Returned', $movement->type->value);
+        $this->assertSame(0, $movement->quantity_in);
+        $this->assertSame(10, $movement->quantity_out);
+    }
+
+    public function test_return_to_supplier_cannot_exceed_available_stock(): void
+    {
+        $user = User::factory()->create();
+        $medicine = $this->makeMedicine(['stock' => 5]);
+
+        $this->actingAs($user)->post('/inventory/returns', [
+            'medicine_id' => $medicine->id,
+            'direction' => 'Return to Supplier',
+            'quantity' => 10,
+        ])->assertSessionHasErrors('quantity');
+
+        $this->assertSame(5, $medicine->fresh()->stock);
+    }
+
+    public function test_transfer_logs_locations_without_changing_net_stock(): void
+    {
+        $user = User::factory()->create();
+        $medicine = $this->makeMedicine(['stock' => 50]);
+
+        $this->actingAs($user)->post('/inventory/transfers', [
+            'medicine_id' => $medicine->id,
+            'from_location' => 'Shelf A3',
+            'to_location' => 'Counter 1',
+            'quantity' => 10,
+            'reason' => 'Restocking counter',
+        ])->assertRedirect('/inventory');
+
+        $this->assertSame(50, $medicine->fresh()->stock);
+
+        $movement = StockMovement::where('medicine_id', $medicine->id)->firstOrFail();
+        $this->assertSame('Transfer', $movement->type->value);
+        $this->assertSame('Shelf A3', $movement->from_location);
+        $this->assertSame('Counter 1', $movement->to_location);
+        $this->assertSame(50, $movement->balance_after);
+    }
+
+    public function test_transfer_requires_different_locations(): void
+    {
+        $user = User::factory()->create();
+        $medicine = $this->makeMedicine(['stock' => 50]);
+
+        $this->actingAs($user)->post('/inventory/transfers', [
+            'medicine_id' => $medicine->id,
+            'from_location' => 'Shelf A3',
+            'to_location' => 'Shelf A3',
+            'quantity' => 10,
+        ])->assertSessionHasErrors('to_location');
+    }
+
+    public function test_audit_with_higher_count_increases_stock(): void
+    {
+        $user = User::factory()->create();
+        $medicine = $this->makeMedicine(['stock' => 50]);
+
+        $this->actingAs($user)->post('/inventory/audits', [
+            'medicine_id' => $medicine->id,
+            'counted_quantity' => 60,
+        ])->assertRedirect('/inventory');
+
+        $this->assertSame(60, $medicine->fresh()->stock);
+        $movement = StockMovement::where('medicine_id', $medicine->id)->firstOrFail();
+        $this->assertSame('Adjustment', $movement->type->value);
+        $this->assertSame(10, $movement->quantity_in);
+        $this->assertSame(0, $movement->quantity_out);
+    }
+
+    public function test_audit_with_lower_count_decreases_stock(): void
+    {
+        $user = User::factory()->create();
+        $medicine = $this->makeMedicine(['stock' => 50]);
+
+        $this->actingAs($user)->post('/inventory/audits', [
+            'medicine_id' => $medicine->id,
+            'counted_quantity' => 44,
+            'reason' => 'Annual stocktake',
+        ])->assertRedirect('/inventory');
+
+        $this->assertSame(44, $medicine->fresh()->stock);
+        $movement = StockMovement::where('medicine_id', $medicine->id)->firstOrFail();
+        $this->assertSame(0, $movement->quantity_in);
+        $this->assertSame(6, $movement->quantity_out);
+    }
+
+    public function test_audit_with_matching_count_creates_no_movement(): void
+    {
+        $user = User::factory()->create();
+        $medicine = $this->makeMedicine(['stock' => 50]);
+
+        $this->actingAs($user)->post('/inventory/audits', [
+            'medicine_id' => $medicine->id,
+            'counted_quantity' => 50,
+        ])->assertRedirect('/inventory');
+
+        $this->assertSame(50, $medicine->fresh()->stock);
+        $this->assertSame(0, StockMovement::where('medicine_id', $medicine->id)->count());
+    }
 }
