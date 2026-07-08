@@ -49,6 +49,7 @@ Route::middleware('auth')->group(function () {
         ->only(['index', 'store', 'show'])
         ->parameters(['sales' => 'sale']);
     Route::post('/sales/{sale}/returns', [SaleController::class, 'storeReturn'])->name('sales.returns.store');
+    Route::post('/sales/{sale}/exchanges', [SaleController::class, 'storeExchange'])->name('sales.exchanges.store');
 
     Route::resource('prescriptions', PrescriptionController::class)
         ->only(['index', 'store', 'show', 'destroy'])

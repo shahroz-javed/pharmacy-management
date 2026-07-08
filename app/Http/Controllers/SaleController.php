@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\StockMovementType;
+use App\Http\Requests\StoreSaleExchangeRequest;
 use App\Http\Requests\StoreSaleRequest;
 use App\Http\Requests\StoreSaleReturnRequest;
 use App\Models\Customer;
@@ -174,10 +175,16 @@ class SaleController extends Controller
 
     public function show(Sale $sale): Response
     {
-        $sale->load(['customer', 'items.medicine:id,generic_name,brand_name,strength,sku', 'payments', 'returns.items.saleItem.medicine:id,generic_name,brand_name,strength,sku', 'user:id,name', 'prescription']);
+        $sale->load([
+            'customer', 'items.medicine:id,generic_name,brand_name,strength,sku', 'payments',
+            'returns.items.saleItem.medicine:id,generic_name,brand_name,strength,sku',
+            'returns.exchangeSale:id,invoice_number,status,total',
+            'user:id,name', 'prescription',
+        ]);
 
         return Inertia::render('SaleDetail', [
             'sale' => $sale,
+            'medicines' => Medicine::where('stock', '>', 0)->orderBy('brand_name')->get(['id', 'generic_name', 'brand_name', 'strength', 'sku', 'selling_price', 'discount', 'tax', 'stock']),
         ]);
     }
 
@@ -196,5 +203,24 @@ class SaleController extends Controller
         }
 
         return redirect()->route('sales.show', $sale)->with('success', 'Return processed successfully');
+    }
+
+    public function storeExchange(StoreSaleExchangeRequest $request, Sale $sale): RedirectResponse
+    {
+        $data = $request->validated();
+
+        $returnQuantities = collect($data['return_items'])
+            ->pluck('quantity', 'item_id')
+            ->toArray();
+
+        try {
+            $exchange = $sale->processExchange($returnQuantities, $data['replacement_items'] ?? [], $data['refund_method'], $data['reason'] ?? null, $request->user()->id);
+        } catch (InvalidArgumentException $e) {
+            throw ValidationException::withMessages(['return_items' => $e->getMessage()]);
+        }
+
+        $redirectSale = $exchange->exchange_sale_id ? $exchange->exchange_sale_id : $sale->id;
+
+        return redirect()->route('sales.show', $redirectSale)->with('success', 'Exchange processed successfully');
     }
 }

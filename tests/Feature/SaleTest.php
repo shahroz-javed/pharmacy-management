@@ -348,4 +348,158 @@ class SaleTest extends TestCase
         $response->assertSessionHasErrors();
         $this->assertSame(99, $medicine->fresh()->stock);
     }
+
+    public function test_exchange_for_equal_value_item_requires_no_extra_payment(): void
+    {
+        $user = User::factory()->create();
+        $original = $this->makeMedicine(['stock' => 100]);
+        $replacement = $this->makeMedicine(['sku' => 'MED401', 'selling_price' => 100, 'stock' => 100]);
+
+        $this->actingAs($user)->post('/sales', [
+            'status' => 'Paid',
+            'items' => [
+                ['medicine_id' => $original->id, 'quantity' => 1, 'unit_price' => 100, 'discount' => 0, 'tax' => 0],
+            ],
+            'payments' => [
+                ['method' => 'Cash', 'amount' => 100],
+            ],
+        ]);
+
+        $sale = Sale::with('items')->firstOrFail();
+        $item = $sale->items->first();
+
+        $response = $this->actingAs($user)->post("/sales/{$sale->id}/exchanges", [
+            'refund_method' => 'Cash',
+            'reason' => 'Wrong medicine',
+            'return_items' => [
+                ['item_id' => $item->id, 'quantity' => 1],
+            ],
+            'replacement_items' => [
+                ['medicine_id' => $replacement->id, 'quantity' => 1, 'unit_price' => 100, 'discount' => 0, 'tax' => 0],
+            ],
+        ]);
+
+        $this->assertSame(100, $original->fresh()->stock);
+        $this->assertSame(99, $replacement->fresh()->stock);
+
+        $exchangeSale = Sale::where('id', '!=', $sale->id)->firstOrFail();
+        $response->assertRedirect("/sales/{$exchangeSale->id}");
+
+        $this->assertSame('Paid', $exchangeSale->status);
+        $this->assertEquals(100, $exchangeSale->total);
+        $this->assertEquals(0, $exchangeSale->amount_paid);
+
+        $saleReturn = $sale->returns()->firstOrFail();
+        $this->assertSame($exchangeSale->id, $saleReturn->exchange_sale_id);
+        $this->assertEquals(0, $saleReturn->refund_amount);
+        $this->assertSame('Returned', $sale->fresh()->status);
+    }
+
+    public function test_exchange_for_more_expensive_item_charges_the_difference(): void
+    {
+        $user = User::factory()->create();
+        $original = $this->makeMedicine(['stock' => 100]);
+        $replacement = $this->makeMedicine(['sku' => 'MED401', 'selling_price' => 150, 'stock' => 100]);
+
+        $this->actingAs($user)->post('/sales', [
+            'status' => 'Paid',
+            'items' => [
+                ['medicine_id' => $original->id, 'quantity' => 1, 'unit_price' => 100, 'discount' => 0, 'tax' => 0],
+            ],
+            'payments' => [
+                ['method' => 'Cash', 'amount' => 100],
+            ],
+        ]);
+
+        $sale = Sale::with('items')->firstOrFail();
+        $item = $sale->items->first();
+
+        $this->actingAs($user)->post("/sales/{$sale->id}/exchanges", [
+            'refund_method' => 'Cash',
+            'return_items' => [
+                ['item_id' => $item->id, 'quantity' => 1],
+            ],
+            'replacement_items' => [
+                ['medicine_id' => $replacement->id, 'quantity' => 1, 'unit_price' => 150, 'discount' => 0, 'tax' => 0],
+            ],
+        ]);
+
+        $exchangeSale = Sale::where('id', '!=', $sale->id)->firstOrFail();
+        $this->assertEquals(150, $exchangeSale->total);
+        $this->assertEquals(50, $exchangeSale->amount_paid);
+        $this->assertEquals(50, $exchangeSale->payments()->sum('amount'));
+
+        $saleReturn = $sale->returns()->firstOrFail();
+        $this->assertEquals(0, $saleReturn->refund_amount);
+    }
+
+    public function test_exchange_for_cheaper_item_refunds_the_difference(): void
+    {
+        $user = User::factory()->create();
+        $original = $this->makeMedicine(['stock' => 100]);
+        $replacement = $this->makeMedicine(['sku' => 'MED401', 'selling_price' => 60, 'stock' => 100]);
+
+        $this->actingAs($user)->post('/sales', [
+            'status' => 'Paid',
+            'items' => [
+                ['medicine_id' => $original->id, 'quantity' => 1, 'unit_price' => 100, 'discount' => 0, 'tax' => 0],
+            ],
+            'payments' => [
+                ['method' => 'Cash', 'amount' => 100],
+            ],
+        ]);
+
+        $sale = Sale::with('items')->firstOrFail();
+        $item = $sale->items->first();
+
+        $this->actingAs($user)->post("/sales/{$sale->id}/exchanges", [
+            'refund_method' => 'Cash',
+            'return_items' => [
+                ['item_id' => $item->id, 'quantity' => 1],
+            ],
+            'replacement_items' => [
+                ['medicine_id' => $replacement->id, 'quantity' => 1, 'unit_price' => 60, 'discount' => 0, 'tax' => 0],
+            ],
+        ]);
+
+        $exchangeSale = Sale::where('id', '!=', $sale->id)->firstOrFail();
+        $this->assertEquals(60, $exchangeSale->total);
+        $this->assertEquals(0, $exchangeSale->amount_paid);
+
+        $saleReturn = $sale->returns()->firstOrFail();
+        $this->assertEquals(40, $saleReturn->refund_amount);
+    }
+
+    public function test_exchange_without_replacement_items_behaves_as_plain_return(): void
+    {
+        $user = User::factory()->create();
+        $medicine = $this->makeMedicine(['stock' => 100]);
+
+        $this->actingAs($user)->post('/sales', [
+            'status' => 'Paid',
+            'items' => [
+                ['medicine_id' => $medicine->id, 'quantity' => 1, 'unit_price' => 100, 'discount' => 0, 'tax' => 0],
+            ],
+            'payments' => [
+                ['method' => 'Cash', 'amount' => 100],
+            ],
+        ]);
+
+        $sale = Sale::with('items')->firstOrFail();
+        $item = $sale->items->first();
+
+        $response = $this->actingAs($user)->post("/sales/{$sale->id}/exchanges", [
+            'refund_method' => 'Cash',
+            'return_items' => [
+                ['item_id' => $item->id, 'quantity' => 1],
+            ],
+        ]);
+
+        $response->assertRedirect("/sales/{$sale->id}");
+        $this->assertSame(1, Sale::count());
+
+        $saleReturn = $sale->returns()->firstOrFail();
+        $this->assertNull($saleReturn->exchange_sale_id);
+        $this->assertEquals(100, $saleReturn->refund_amount);
+    }
 }

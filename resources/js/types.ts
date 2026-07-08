@@ -186,12 +186,14 @@ export interface SaleReturnItem {
 export interface SaleReturn {
   id: number;
   sale_id: number;
+  exchange_sale_id: number | null;
   user_id: number | null;
   refund_amount: string;
   refund_method: string;
   reason: string | null;
   created_at: string;
   items: SaleReturnItem[];
+  exchange_sale?: Pick<Sale, "id" | "invoice_number" | "status" | "total"> | null;
 }
 
 export interface Sale {

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useForm } from "@inertiajs/react";
-import { ChevronLeft, Printer, RefreshCw, Check, ShoppingCart } from "lucide-react";
+import { ChevronLeft, Printer, RefreshCw, Check, ShoppingCart, ArrowLeftRight, X, ExternalLink } from "lucide-react";
 import { AppLayout } from "@/Layouts/AppLayout";
 import { Btn } from "@/Components/ui/Btn";
 import { Card } from "@/Components/ui/Card";
@@ -9,10 +9,18 @@ import { Badge } from "@/Components/ui/Badge";
 import { EmptyState } from "@/Components/ui/EmptyState";
 import { Modal } from "@/Components/ui/Modal";
 import { Toast } from "@/Components/ui/Toast";
-import type { Sale } from "@/types";
+import type { Medicine, Sale } from "@/types";
 
-export default function SaleDetail({ sale: s }: { sale: Sale }) {
-  const [returnModal, setReturnModal] = useState(false);
+type Mode = "return" | "exchange";
+type ReplacementLine = { medicine_id: string; quantity: string; unit_price: string; discount: string; tax: string };
+
+interface Props {
+  sale: Sale;
+  medicines: Pick<Medicine, "id" | "generic_name" | "brand_name" | "strength" | "sku" | "selling_price" | "discount" | "tax" | "stock">[];
+}
+
+export default function SaleDetail({ sale: s, medicines }: Props) {
+  const [modalMode, setModalMode] = useState<Mode | null>(null);
   const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
   const items = s.items ?? [];
   const payments = s.payments ?? [];
@@ -22,25 +30,68 @@ export default function SaleDetail({ sale: s }: { sale: Sale }) {
   const { data, setData, post, processing, errors, reset } = useForm({
     refund_method: "Original Payment Method",
     reason: "",
-    items: [] as { item_id: number; quantity: number }[],
+    return_items: [] as { item_id: number; quantity: number }[],
+    replacement_items: [] as ReplacementLine[],
   });
 
   const toggleItem = (itemId: number, maxQty: number, checked: boolean) => {
-    setData("items", checked
-      ? [...data.items, { item_id: itemId, quantity: maxQty }]
-      : data.items.filter(i => i.item_id !== itemId));
+    setData("return_items", checked
+      ? [...data.return_items, { item_id: itemId, quantity: maxQty }]
+      : data.return_items.filter(i => i.item_id !== itemId));
   };
 
   const setReturnQty = (itemId: number, qty: number) => {
-    setData("items", data.items.map(i => i.item_id === itemId ? { ...i, quantity: qty } : i));
+    setData("return_items", data.return_items.map(i => i.item_id === itemId ? { ...i, quantity: qty } : i));
   };
 
-  const submitReturn = () => {
-    post(`/sales/${s.id}/returns`, {
-      preserveScroll: true,
-      onSuccess: () => { setReturnModal(false); reset(); setToast({ msg: "Return processed successfully", type: "success" }); },
-      onError: () => setToast({ msg: "Please fix the errors and try again", type: "error" }),
-    });
+  const returnedValue = data.return_items.reduce((sum, ri) => {
+    const item = items.find(i => i.id === ri.item_id);
+    if (!item) return sum;
+    const unit = item.quantity > 0 ? Number(item.total) / item.quantity : 0;
+    return sum + unit * ri.quantity;
+  }, 0);
+
+  const addReplacement = () => setData("replacement_items", [...data.replacement_items, { medicine_id: "", quantity: "1", unit_price: "", discount: "0", tax: "0" }]);
+  const updateReplacement = (idx: number, field: keyof ReplacementLine, value: string) => {
+    setData("replacement_items", data.replacement_items.map((row, ix) => {
+      if (ix !== idx) return row;
+      if (field === "medicine_id") {
+        const m = medicines.find(med => String(med.id) === value);
+        return { ...row, medicine_id: value, unit_price: m ? m.selling_price : row.unit_price, discount: m ? m.discount : row.discount, tax: m ? m.tax : row.tax };
+      }
+      return { ...row, [field]: value };
+    }));
+  };
+  const removeReplacement = (idx: number) => setData("replacement_items", data.replacement_items.filter((_, ix) => ix !== idx));
+
+  const replacementValue = data.replacement_items.reduce((sum, r) => {
+    const qty = parseFloat(r.quantity) || 0;
+    const price = parseFloat(r.unit_price) || 0;
+    const disc = parseFloat(r.discount) || 0;
+    const tax = parseFloat(r.tax) || 0;
+    const gross = qty * price;
+    const afterDiscount = gross - gross * (disc / 100);
+    return sum + afterDiscount + afterDiscount * (tax / 100);
+  }, 0);
+
+  const priceDifference = replacementValue - returnedValue;
+
+  const closeModal = () => { setModalMode(null); reset(); };
+
+  const submit = () => {
+    if (modalMode === "return") {
+      post(`/sales/${s.id}/returns`, {
+        preserveScroll: true,
+        onSuccess: () => { closeModal(); setToast({ msg: "Return processed successfully", type: "success" }); },
+        onError: () => setToast({ msg: "Please fix the errors and try again", type: "error" }),
+      });
+    } else {
+      post(`/sales/${s.id}/exchanges`, {
+        preserveScroll: true,
+        onSuccess: () => { closeModal(); setToast({ msg: "Exchange processed successfully", type: "success" }); },
+        onError: () => setToast({ msg: "Please fix the errors and try again", type: "error" }),
+      });
+    }
   };
 
   return (
@@ -53,7 +104,10 @@ export default function SaleDetail({ sale: s }: { sale: Sale }) {
           <Badge status={s.status} />
           <div className="ml-auto flex gap-2">
             {returnableItems.length > 0 && (
-              <Btn variant="outline" size="sm" onClick={() => setReturnModal(true)}><RefreshCw size={13} />Return / Refund</Btn>
+              <>
+                <Btn variant="outline" size="sm" onClick={() => setModalMode("return")}><RefreshCw size={13} />Return / Refund</Btn>
+                <Btn variant="outline" size="sm" onClick={() => setModalMode("exchange")}><ArrowLeftRight size={13} />Exchange</Btn>
+              </>
             )}
             <Btn variant="outline" size="sm" onClick={() => window.print()}><Printer size={13} />Print Receipt</Btn>
             <Link href="/pos">
@@ -123,12 +177,12 @@ export default function SaleDetail({ sale: s }: { sale: Sale }) {
         )}
 
         <Card>
-          <div className="px-4 py-3 border-b border-border text-sm font-semibold text-foreground">Return / Refund History</div>
+          <div className="px-4 py-3 border-b border-border text-sm font-semibold text-foreground">Return / Exchange History</div>
           {returns.length === 0 ? (
-            <EmptyState icon={<RefreshCw size={40} />} title="No returns" description="Returns and refunds for this sale will appear here." />
+            <EmptyState icon={<RefreshCw size={40} />} title="No returns or exchanges" description="Returns, refunds, and exchanges for this sale will appear here." />
           ) : (
             <table className="w-full">
-              <TableHeader cols={["Date", "Items", "Refund Amount", "Method", "Reason"]} />
+              <TableHeader cols={["Date", "Items Returned", "Refund Amount", "Method", "Exchanged For", "Reason"]} />
               <tbody>
                 {returns.map(r => (
                   <tr key={r.id} className="border-b border-border last:border-0 hover:bg-muted/30">
@@ -136,6 +190,13 @@ export default function SaleDetail({ sale: s }: { sale: Sale }) {
                     <td className="px-4 py-2.5 text-xs text-muted-foreground">{r.items.map(ri => `${ri.sale_item.medicine.brand_name} ×${ri.quantity}`).join(", ")}</td>
                     <td className="px-4 py-2.5 text-xs font-mono font-semibold text-foreground">₹{Number(r.refund_amount).toFixed(2)}</td>
                     <td className="px-4 py-2.5 text-xs text-muted-foreground">{r.refund_method}</td>
+                    <td className="px-4 py-2.5 text-xs">
+                      {r.exchange_sale ? (
+                        <Link href={`/sales/${r.exchange_sale.id}`} className="text-primary hover:underline flex items-center gap-1">
+                          {r.exchange_sale.invoice_number} <ExternalLink size={10} />
+                        </Link>
+                      ) : "—"}
+                    </td>
                     <td className="px-4 py-2.5 text-xs text-muted-foreground">{r.reason ?? "—"}</td>
                   </tr>
                 ))}
@@ -144,7 +205,7 @@ export default function SaleDetail({ sale: s }: { sale: Sale }) {
           )}
         </Card>
 
-        <Modal open={returnModal} onClose={() => setReturnModal(false)} title="Process Return / Refund" width="max-w-xl">
+        <Modal open={modalMode !== null} onClose={closeModal} title={modalMode === "exchange" ? "Process Exchange" : "Process Return / Refund"} width="max-w-2xl">
           <div className="p-5 space-y-4">
             <div className="p-3 bg-muted/50 rounded-md text-xs text-muted-foreground">
               Invoice: <span className="font-mono font-medium text-foreground">{s.invoice_number}</span> · ₹{Number(s.total).toFixed(2)} · {s.customer?.name ?? "Walk-in"}
@@ -153,7 +214,7 @@ export default function SaleDetail({ sale: s }: { sale: Sale }) {
               <label className="text-xs font-medium text-foreground block mb-2">Select Items to Return</label>
               {returnableItems.map(item => {
                 const remaining = item.quantity - item.quantity_returned;
-                const selected = data.items.find(i => i.item_id === item.id);
+                const selected = data.return_items.find(i => i.item_id === item.id);
                 return (
                   <div key={item.id} className="flex items-center gap-3 py-2 border-b border-border last:border-0">
                     <input
@@ -177,8 +238,45 @@ export default function SaleDetail({ sale: s }: { sale: Sale }) {
                 );
               })}
             </div>
+
+            {modalMode === "exchange" && (
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-xs font-medium text-foreground">Replacement Items</label>
+                  <button onClick={addReplacement} className="text-xs text-primary hover:underline">+ Add medicine</button>
+                </div>
+                {data.replacement_items.length === 0 ? (
+                  <div className="text-xs text-muted-foreground py-2">No replacement items added — this will behave as a plain return.</div>
+                ) : (
+                  <div className="space-y-2">
+                    {data.replacement_items.map((row, idx) => (
+                      <div key={idx} className="flex items-center gap-1.5">
+                        <select value={row.medicine_id} onChange={e => updateReplacement(idx, "medicine_id", e.target.value)} className="flex-1 text-xs border border-border rounded-md px-2 py-1.5 bg-input-background focus:outline-none">
+                          <option value="">Select medicine…</option>
+                          {medicines.map(m => <option key={m.id} value={m.id}>{m.brand_name} {m.strength} · ₹{Number(m.selling_price).toFixed(2)}</option>)}
+                        </select>
+                        <input type="number" min={1} value={row.quantity} onChange={e => updateReplacement(idx, "quantity", e.target.value)} className="w-14 text-center text-xs font-mono border border-border rounded-md px-2 py-1.5 bg-input-background focus:outline-none" />
+                        <input type="number" step="0.01" value={row.unit_price} onChange={e => updateReplacement(idx, "unit_price", e.target.value)} className="w-20 text-center text-xs font-mono border border-border rounded-md px-2 py-1.5 bg-input-background focus:outline-none" />
+                        <button onClick={() => removeReplacement(idx)} className="p-1 text-muted-foreground hover:text-red-600"><X size={12} /></button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {data.replacement_items.length > 0 && (
+                  <div className="mt-3 p-3 bg-muted/50 rounded-md text-xs space-y-1">
+                    <div className="flex justify-between"><span className="text-muted-foreground">Returned value</span><span className="font-mono">₹{returnedValue.toFixed(2)}</span></div>
+                    <div className="flex justify-between"><span className="text-muted-foreground">Replacement value</span><span className="font-mono">₹{replacementValue.toFixed(2)}</span></div>
+                    <div className="flex justify-between font-semibold border-t border-border pt-1 mt-1">
+                      <span>{priceDifference > 0 ? "Customer pays" : priceDifference < 0 ? "Refund to customer" : "Even exchange"}</span>
+                      <span className="font-mono">₹{Math.abs(priceDifference).toFixed(2)}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             <div>
-              <label className="text-xs font-medium text-foreground block mb-1.5">Refund Method</label>
+              <label className="text-xs font-medium text-foreground block mb-1.5">{modalMode === "exchange" ? "Settlement Method" : "Refund Method"}</label>
               <select value={data.refund_method} onChange={e => setData("refund_method", e.target.value)} className="w-full px-3 py-2 text-sm border border-border rounded-md bg-input-background focus:outline-none">
                 <option>Original Payment Method</option>
                 <option>Cash</option>
@@ -187,12 +285,14 @@ export default function SaleDetail({ sale: s }: { sale: Sale }) {
             </div>
             <div>
               <label className="text-xs font-medium text-foreground block mb-1.5">Reason</label>
-              <textarea rows={2} value={data.reason} onChange={e => setData("reason", e.target.value)} placeholder="Return reason…" className="w-full px-3 py-2 text-sm border border-border rounded-md bg-input-background resize-none focus:outline-none" />
+              <textarea rows={2} value={data.reason} onChange={e => setData("reason", e.target.value)} placeholder={modalMode === "exchange" ? "Exchange reason…" : "Return reason…"} className="w-full px-3 py-2 text-sm border border-border rounded-md bg-input-background resize-none focus:outline-none" />
             </div>
-            {errors.items && <p className="text-xs text-red-500">{errors.items}</p>}
+            {errors.return_items && <p className="text-xs text-red-500">{errors.return_items}</p>}
             <div className="flex justify-end gap-2">
-              <Btn variant="outline" onClick={() => setReturnModal(false)}>Cancel</Btn>
-              <Btn variant="danger" disabled={processing || data.items.length === 0} onClick={submitReturn}><Check size={13} />Process Return</Btn>
+              <Btn variant="outline" onClick={closeModal}>Cancel</Btn>
+              <Btn variant={modalMode === "exchange" ? "primary" : "danger"} disabled={processing || data.return_items.length === 0} onClick={submit}>
+                <Check size={13} />{modalMode === "exchange" ? "Process Exchange" : "Process Return"}
+              </Btn>
             </div>
           </div>
         </Modal>
