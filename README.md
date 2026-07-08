@@ -74,11 +74,11 @@ Covered by [tests/Feature/InventoryTest.php](tests/Feature/InventoryTest.php) (1
 - [x] Suppliers
 - [x] Receive Inventory
 - [x] Purchase History
-- [ ] Purchase Invoice
+- [x] Purchase Invoice
 
 Backed by `App\Models\PurchaseOrder`, `App\Models\PurchaseOrderItem`, `App\Http\Controllers\PurchaseOrderController`, `purchase_orders`/`purchase_order_items` tables. Creating a PO records line items and puts the full amount on the supplier's `outstanding_balance` (credit). Receiving is a separate step (`PurchaseOrder::receive()`) that supports partial receipt per item — each unit received creates a `Purchase` stock movement (via `Medicine::applyStockMovement()`) and updates the medicine's current batch/expiry, while the item's own `batch_number`/`expiry_date`/`quantity_received` are kept on `purchase_order_items` for history. Order status auto-derives to Ordered / Partial / Received based on how much of each item has been received. Covered by [tests/Feature/PurchaseOrderTest.php](tests/Feature/PurchaseOrderTest.php) (7 tests).
 
-Not yet implemented: **Purchase Invoice** (no PDF/printable invoice document — `PurchaseDetail.tsx` only has a plain `window.print()` of the page, not a formatted invoice).
+`PurchaseDetail.tsx` renders a dedicated print-only purchase invoice (pharmacy header, supplier bill-from block, itemized table, subtotal/tax/total) via `window.print()`, following the same `hidden print:block` pattern used for the medicine print label and sale receipt.
 
 ### 6. Supplier Management — Dynamic
 - [x] Supplier List
@@ -89,15 +89,15 @@ Not yet implemented: **Purchase Invoice** (no PDF/printable invoice document —
 
 Backed by `App\Models\Supplier`, `App\Models\SupplierPayment`, `App\Http\Controllers\SupplierController`, `suppliers`/`supplier_payments` tables. `outstanding_balance` increases when a purchase order is created (credit) and decreases via `Supplier::recordPayment()`, which also writes a `supplier_payments` row (method, optional linked PO, notes) for a full payment history. Covered by [tests/Feature/SupplierTest.php](tests/Feature/SupplierTest.php).
 
-### 7. Customer Management — Static (UI only)
-- [ ] Customer List
-- [ ] Customer Profile
+### 7. Customer Management — Dynamic
+- [x] Customer List
+- [x] Customer Profile
 - [ ] Purchase History
-- [ ] Loyalty Points
-- [ ] Credit Balance
+- [x] Loyalty Points
+- [x] Credit Balance
 - [ ] Prescriptions
 
-Renders `Customers.tsx`, `CustomerDetail.tsx` from `mockData.ts`. No `customers` table/controller yet.
+Backed by `App\Models\Customer`, `App\Models\CustomerCreditPayment`, `App\Http\Controllers\CustomerController`, `customers`/`customer_credit_payments` tables. `credit_balance` and `loyalty_points` live directly on the customer; `Customer::recordCreditPayment()` decrements the balance and writes a `customer_credit_payments` row (method, optional notes) for a full payment history, mirroring `Supplier::recordPayment()`. `Customer::adjustLoyaltyPoints()` adds or redeems points (redeem floors at zero). Purchase History and Prescriptions sections render as empty states — they'll populate once Sales and Prescription Management become dynamic. Covered by [tests/Feature/CustomerTest.php](tests/Feature/CustomerTest.php) (10 tests).
 
 ### 8. POS (Point of Sale) — Static (UI only)
 - [ ] Barcode Scanner
@@ -178,4 +178,4 @@ Renders `SettingsPage.tsx` from mock data. No settings table/controller yet.
 
 ## Suggested order for making remaining modules dynamic
 
-Customers is the natural next step (needed by Sales/POS), then Sales/POS together (since POS creates Sales and `Sale` stock movements against the same ledger), then Prescriptions, Reports (reads across the above), and finally Users/Roles and Settings.
+Sales/POS is the natural next step now that Customers exists (since POS creates Sales and `Sale` stock movements against the same ledger, and links to a `Customer`), then Prescriptions, Reports (reads across the above), and finally Users/Roles and Settings.

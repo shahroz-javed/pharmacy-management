@@ -95,6 +95,29 @@ export interface Supplier {
   purchase_orders?: PurchaseOrder[];
 }
 
+export interface CustomerCreditPayment {
+  id: number;
+  customer_id: number;
+  user_id: number | null;
+  amount: string;
+  method: string;
+  notes: string | null;
+  created_at: string;
+  user?: { id: number; name: string } | null;
+}
+
+export interface Customer {
+  id: number;
+  name: string;
+  phone: string | null;
+  email: string | null;
+  city: string | null;
+  address: string | null;
+  loyalty_points: number;
+  credit_balance: string;
+  credit_payments?: CustomerCreditPayment[];
+}
+
 export type PurchaseOrderStatus = "Ordered" | "Partial" | "Received";
 
 export interface PurchaseOrderItem {
@@ -123,6 +146,6 @@ export interface PurchaseOrder {
   tax_total: string;
   total: string;
   items_count?: number;
-  supplier: Pick<Supplier, "id" | "name">;
+  supplier: Pick<Supplier, "id" | "name"> | Supplier;
   items?: PurchaseOrderItem[];
 }

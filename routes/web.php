@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\MedicineController;
 use App\Http\Controllers\PurchaseOrderController;
@@ -38,13 +39,11 @@ Route::middleware('auth')->group(function () {
         ->parameters(['suppliers' => 'supplier']);
     Route::post('/suppliers/{supplier}/payments', [SupplierController::class, 'storePayment'])->name('suppliers.payments.store');
 
-    Route::get('/customers', function () {
-        return Inertia::render('Customers');
-    });
-
-    Route::get('/customers/{id}', function (int $id) {
-        return Inertia::render('CustomerDetail', ['id' => $id]);
-    });
+    Route::resource('customers', CustomerController::class)
+        ->except(['create', 'edit'])
+        ->parameters(['customers' => 'customer']);
+    Route::post('/customers/{customer}/payments', [CustomerController::class, 'storeCreditPayment'])->name('customers.payments.store');
+    Route::post('/customers/{customer}/loyalty', [CustomerController::class, 'storeLoyalty'])->name('customers.loyalty.store');
 
     Route::get('/sales', function () {
         return Inertia::render('Sales');

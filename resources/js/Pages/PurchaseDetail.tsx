@@ -37,7 +37,7 @@ export default function PurchaseDetail({ order }: { order: PurchaseOrder }) {
 
   return (
     <AppLayout notifCount={3}>
-      <div className="p-5 max-w-4xl">
+      <div className="p-5 max-w-4xl print:hidden">
         {toast && <Toast message={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
         <div className="flex items-center gap-2 mb-5">
           <Link href="/purchases" className="text-muted-foreground hover:text-foreground"><ChevronLeft size={18} /></Link>
@@ -47,7 +47,7 @@ export default function PurchaseDetail({ order }: { order: PurchaseOrder }) {
             {!fullyReceived && (
               <Btn variant="primary" size="sm" onClick={() => setReceiveModal(true)}><PackageCheck size={13} />Receive Purchase</Btn>
             )}
-            <Btn variant="outline" size="sm" onClick={() => window.print()}><Printer size={13} />Print</Btn>
+            <Btn variant="outline" size="sm" onClick={() => window.print()}><Printer size={13} />Print Invoice</Btn>
           </div>
         </div>
         <div className="grid grid-cols-3 gap-4 mb-4">
@@ -123,6 +123,77 @@ export default function PurchaseDetail({ order }: { order: PurchaseOrder }) {
             </div>
           </div>
         </Modal>
+      </div>
+
+      {/* Printable invoice — only rendered visually when printing */}
+      <div className="hidden print:block p-6">
+        <div className="flex justify-between mb-6">
+          <div>
+            <div className="text-lg font-semibold text-black">PharmaPro Medical Store</div>
+            <div className="text-xs text-gray-600">123, MG Road, Mumbai</div>
+            <div className="text-xs text-gray-600">GST: 27AABCU9603R1ZX</div>
+          </div>
+          <div className="text-right">
+            <div className="text-sm font-bold text-black">PURCHASE INVOICE</div>
+            <div className="text-xs text-gray-600">PO No. {order.po_number}</div>
+            {order.invoice_number && <div className="text-xs text-gray-600">Invoice No. {order.invoice_number}</div>}
+            <div className="text-xs text-gray-600">Date: {order.order_date}</div>
+          </div>
+        </div>
+
+        <div className="flex justify-between mb-6 p-3 bg-gray-100 rounded-md text-sm">
+          <div>
+            <div className="text-xs text-gray-600 mb-0.5">Billed From (Supplier)</div>
+            <div className="font-medium text-black">{order.supplier.name}</div>
+            {"address" in order.supplier && order.supplier.address && <div className="text-xs text-gray-600">{order.supplier.address}</div>}
+            {"phone" in order.supplier && order.supplier.phone && <div className="text-xs text-gray-600">{order.supplier.phone}</div>}
+            {"email" in order.supplier && order.supplier.email && <div className="text-xs text-gray-600">{order.supplier.email}</div>}
+          </div>
+          <div className="text-right">
+            <div className="text-xs text-gray-600 mb-0.5">Status</div>
+            <div className="font-medium text-black">{order.status}</div>
+            {order.expected_delivery && <div className="text-xs text-gray-600 mt-1">Expected: {order.expected_delivery}</div>}
+          </div>
+        </div>
+
+        <table className="w-full mb-4 text-sm">
+          <thead>
+            <tr className="border-b-2 border-black text-left">
+              <th className="py-2 font-semibold text-black">Medicine</th>
+              <th className="py-2 font-semibold text-black">Batch</th>
+              <th className="py-2 font-semibold text-black">Expiry</th>
+              <th className="py-2 font-semibold text-black text-right">Qty</th>
+              <th className="py-2 font-semibold text-black text-right">Unit Price</th>
+              <th className="py-2 font-semibold text-black text-right">Tax</th>
+              <th className="py-2 font-semibold text-black text-right">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.map(item => (
+              <tr key={item.id} className="border-b border-gray-300">
+                <td className="py-2 text-black">{item.medicine.brand_name} {item.medicine.strength}</td>
+                <td className="py-2 font-mono text-gray-700">{item.batch_number}</td>
+                <td className="py-2 font-mono text-gray-700">{item.expiry_date}</td>
+                <td className="py-2 font-mono text-black text-right">{item.quantity}</td>
+                <td className="py-2 font-mono text-black text-right">₹{Number(item.unit_price).toFixed(2)}</td>
+                <td className="py-2 font-mono text-gray-700 text-right">{item.tax}%</td>
+                <td className="py-2 font-mono font-semibold text-black text-right">₹{Number(item.total).toFixed(2)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        <div className="flex justify-end">
+          <div className="w-64 space-y-1.5 text-sm border-t-2 border-black pt-2">
+            <div className="flex justify-between"><span className="text-gray-600">Subtotal</span><span className="font-mono text-black">₹{Number(order.subtotal).toFixed(2)}</span></div>
+            <div className="flex justify-between"><span className="text-gray-600">Tax</span><span className="font-mono text-black">₹{Number(order.tax_total).toFixed(2)}</span></div>
+            <div className="flex justify-between font-bold text-base border-t border-black pt-2 mt-2">
+              <span>Total</span><span className="font-mono">₹{Number(order.total).toFixed(2)}</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-10 text-xs text-gray-500">This is a system-generated purchase invoice.</div>
       </div>
     </AppLayout>
   );
