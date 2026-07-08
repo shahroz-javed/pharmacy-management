@@ -22,6 +22,7 @@ class StoreSaleRequest extends FormRequest
             'status' => ['required', Rule::in(['Paid', 'Held'])],
             'hold_reference' => ['nullable', 'string', 'max:255'],
             'prescription_path' => ['nullable', 'string', 'max:255'],
+            'prescription_id' => ['nullable', 'integer', 'exists:prescriptions,id'],
             'items' => ['required', 'array', 'min:1'],
             'items.*.medicine_id' => ['required', 'integer', 'exists:medicines,id'],
             'items.*.quantity' => ['required', 'integer', 'min:1'],

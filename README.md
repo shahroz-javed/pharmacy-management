@@ -95,9 +95,9 @@ Backed by `App\Models\Supplier`, `App\Models\SupplierPayment`, `App\Http\Control
 - [ ] Purchase History
 - [x] Loyalty Points
 - [x] Credit Balance
-- [ ] Prescriptions
+- [x] Prescriptions
 
-Backed by `App\Models\Customer`, `App\Models\CustomerCreditPayment`, `App\Http\Controllers\CustomerController`, `customers`/`customer_credit_payments` tables. `credit_balance` and `loyalty_points` live directly on the customer; `Customer::recordCreditPayment()` decrements the balance and writes a `customer_credit_payments` row (method, optional notes) for a full payment history, mirroring `Supplier::recordPayment()`. `Customer::adjustLoyaltyPoints()` adds or redeems points (redeem floors at zero). Purchase History and Prescriptions sections render as empty states — they'll populate once Sales and Prescription Management become dynamic. Covered by [tests/Feature/CustomerTest.php](tests/Feature/CustomerTest.php) (10 tests).
+Backed by `App\Models\Customer`, `App\Models\CustomerCreditPayment`, `App\Http\Controllers\CustomerController`, `customers`/`customer_credit_payments` tables. `credit_balance` and `loyalty_points` live directly on the customer; `Customer::recordCreditPayment()` decrements the balance and writes a `customer_credit_payments` row (method, optional notes) for a full payment history, mirroring `Supplier::recordPayment()`. `Customer::adjustLoyaltyPoints()` adds or redeems points (redeem floors at zero). The Prescriptions section now lists the customer's real `Prescription` history (linked via `customer_id`). Purchase History still renders as an empty state — it needs a dedicated `Sale`-by-customer view, not yet wired up even though `Sale` now exists. Covered by [tests/Feature/CustomerTest.php](tests/Feature/CustomerTest.php) (10 tests).
 
 ### 8. POS (Point of Sale) — Dynamic
 - [x] Barcode Scanner
@@ -106,13 +106,13 @@ Backed by `App\Models\Customer`, `App\Models\CustomerCreditPayment`, `App\Http\C
 - [x] Discount
 - [x] Tax
 - [x] Customer Selection
-- [ ] Prescription Upload
+- [x] Prescription Upload
 - [x] Payment Methods
 - [x] Split Payment
 - [x] Print/Email Receipt
 - [x] Hold/Resume Sale
 
-Backed by `App\Models\Sale`, `App\Models\SaleItem`, `App\Models\SalePayment`, `App\Http\Controllers\SaleController`. `GET /pos` loads in-stock medicines, customers, and any `Held` sales. Checkout posts to `sales.store`: `DB::transaction` computes line totals, creates the `Sale` + `SaleItem` rows, decrements stock per item via `Medicine::applyStockMovement(Sale, ...)` (same ledger as every other module), records one `SalePayment` row per tendered method (`payment_method` becomes `Split` when more than one method is used), increments `Customer::credit_balance` for any `Credit` portion (rejected server-side if no customer is selected), and awards 1 loyalty point per ₹100 via `Customer::adjustLoyaltyPoints()`. Holding a sale (`status: Held`) skips all of that — no stock movement, no payment — so it can be resumed later by reloading its cart from `/pos`'s `heldSales` prop. The barcode field is a plain search box matched against name/SKU/barcode client-side (no hardware scanner integration, but a scanner that types-and-Enters works with it). Prescription upload is not implemented yet — it depends on Prescription Management (§10). Covered by [tests/Feature/SaleTest.php](tests/Feature/SaleTest.php) (13 tests).
+Backed by `App\Models\Sale`, `App\Models\SaleItem`, `App\Models\SalePayment`, `App\Http\Controllers\SaleController`. `GET /pos` loads in-stock medicines, customers, any `Held` sales, and `Pending` prescriptions. Checkout posts to `sales.store`: `DB::transaction` computes line totals, creates the `Sale` + `SaleItem` rows, decrements stock per item via `Medicine::applyStockMovement(Sale, ...)` (same ledger as every other module), records one `SalePayment` row per tendered method (`payment_method` becomes `Split` when more than one method is used), increments `Customer::credit_balance` for any `Credit` portion (rejected server-side if no customer is selected), awards 1 loyalty point per ₹100 via `Customer::adjustLoyaltyPoints()`, and — if a prescription was linked — calls `Prescription::dispenseVia()` to flip it to `Dispensed` and stamp its `sale_id`. Holding a sale (`status: Held`) skips all of that — no stock movement, no payment, no dispensing — so it can be resumed later by reloading its cart from `/pos`'s `heldSales` prop. The "Prescription" button opens a picker of pending prescriptions; selecting one loads its attached medicines into the cart at their prescribed quantities and links it to the sale. The barcode field is a plain search box matched against name/SKU/barcode client-side (no hardware scanner integration, but a scanner that types-and-Enters works with it). Covered by [tests/Feature/SaleTest.php](tests/Feature/SaleTest.php) (13 tests).
 
 ### 9. Sales Management — Dynamic
 - [x] Sales History
@@ -123,13 +123,13 @@ Backed by `App\Models\Sale`, `App\Models\SaleItem`, `App\Models\SalePayment`, `A
 
 `SaleController::index` lists everything except `Held` sales, with search/status/payment-method/date filters and today/week/returns stats computed from the DB. `SaleController::show` renders the full sale with items, payment breakdown, and return history. Returns go through `Sale::processReturn()` (mirrors `PurchaseOrder::receive()`): per selected item, validates the quantity against what's left to return, restocks via `applyStockMovement(Returned, ...)`, and writes a `SaleReturn` + `SaleReturnItem` row for the refund history; the sale's status auto-derives to `Partially Returned` or `Returned`. `SaleDetail.tsx` has a `hidden print:block` receipt (same pattern as `PurchaseDetail.tsx`'s invoice). Exchange (return + immediate replacement in one flow) has no dedicated UI yet — do a return, then a new POS sale.
 
-### 10. Prescription Management — Static (UI only)
-- [ ] Upload Prescription
-- [ ] View Prescription
-- [ ] Attach Medicines
-- [ ] Patient History
+### 10. Prescription Management — Dynamic
+- [x] Upload Prescription
+- [x] View Prescription
+- [x] Attach Medicines
+- [x] Patient History
 
-Renders `Prescriptions.tsx` from `mockData.ts`. No table/controller yet.
+Backed by `App\Models\Prescription`, `App\Models\PrescriptionItem`, `App\Http\Controllers\PrescriptionController`, `prescriptions`/`prescription_items` tables. A prescription always has a free-text `patient_name`/`patient_phone` and an optional `customer_id` link (for walk-ins who aren't registered customers yet); `Prescription::generateRxNumber()` mirrors `Sale::generateInvoiceNumber()`'s `RX-YYMM-###` scheme. Uploading stores the file on the `public` disk (`prescriptions/`, same `Storage::disk('public')` pattern as `Medicine::image_path`) and optionally attaches medicine line items in the same request; `PrescriptionController::storeItems` lets the detail page fully replace the attached items later (delete-then-recreate, not a diff). Status starts `Pending` and flips to `Dispensed` only when a POS sale is checked out with that prescription linked (`Prescription::dispenseVia()`, called from `SaleController::store`) — there's no manual "mark dispensed" action, dispensing always goes through an actual sale. Patient History surfaces on the customer profile (`CustomerController::show` now eager-loads `prescriptions`) when a prescription is linked to a `Customer`. Covered by [tests/Feature/PrescriptionTest.php](tests/Feature/PrescriptionTest.php) (8 tests).
 
 ### 11. Reports — Static (UI only)
 - [ ] Sales Reports
@@ -178,4 +178,4 @@ Renders `SettingsPage.tsx` from mock data. No settings table/controller yet.
 
 ## Suggested order for making remaining modules dynamic
 
-Prescription Management is the natural next step now that Sales/POS exists (it needs a `sale_id`/`patient` link and feeds POS's prescription upload), then Reports (reads across Sales/Purchases/Inventory), and finally Users/Roles and Settings.
+Reports is the natural next step (it reads across Sales/Purchases/Inventory, all now dynamic), then Users/Roles and Settings.

@@ -13,7 +13,7 @@ use InvalidArgumentException;
 #[Fillable([
     'invoice_number', 'customer_id', 'user_id', 'subtotal', 'discount_total', 'tax_total', 'total',
     'payment_method', 'amount_paid', 'loyalty_points_earned', 'status', 'hold_reference',
-    'prescription_path', 'sold_at',
+    'prescription_path', 'prescription_id', 'sold_at',
 ])]
 class Sale extends Model
 {
@@ -53,6 +53,11 @@ class Sale extends Model
     public function returns(): HasMany
     {
         return $this->hasMany(SaleReturn::class);
+    }
+
+    public function prescription(): BelongsTo
+    {
+        return $this->belongsTo(Prescription::class);
     }
 
     public static function generateInvoiceNumber(): string

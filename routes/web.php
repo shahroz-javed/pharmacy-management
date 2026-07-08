@@ -3,6 +3,7 @@
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\MedicineController;
+use App\Http\Controllers\PrescriptionController;
 use App\Http\Controllers\PurchaseOrderController;
 use App\Http\Controllers\SaleController;
 use App\Http\Controllers\SupplierController;
@@ -49,9 +50,10 @@ Route::middleware('auth')->group(function () {
         ->parameters(['sales' => 'sale']);
     Route::post('/sales/{sale}/returns', [SaleController::class, 'storeReturn'])->name('sales.returns.store');
 
-    Route::get('/prescriptions', function () {
-        return Inertia::render('Prescriptions');
-    });
+    Route::resource('prescriptions', PrescriptionController::class)
+        ->only(['index', 'store', 'show', 'destroy'])
+        ->parameters(['prescriptions' => 'prescription']);
+    Route::post('/prescriptions/{prescription}/items', [PrescriptionController::class, 'storeItems'])->name('prescriptions.items.store');
 
     Route::get('/reports', function () {
         return Inertia::render('Reports');

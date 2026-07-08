@@ -116,6 +116,7 @@ export interface Customer {
   loyalty_points: number;
   credit_balance: string;
   credit_payments?: CustomerCreditPayment[];
+  prescriptions?: Prescription[];
 }
 
 export type PurchaseOrderStatus = "Ordered" | "Partial" | "Received";
@@ -207,6 +208,7 @@ export interface Sale {
   status: SaleStatus;
   hold_reference: string | null;
   prescription_path: string | null;
+  prescription_id: number | null;
   sold_at: string | null;
   created_at: string;
   items_count?: number;
@@ -215,6 +217,35 @@ export interface Sale {
   items?: SaleItem[];
   payments?: SalePayment[];
   returns?: SaleReturn[];
+}
+
+export type PrescriptionStatus = "Pending" | "Dispensed";
+
+export interface PrescriptionItem {
+  id: number;
+  prescription_id: number;
+  medicine_id: number;
+  quantity: number;
+  dosage_instructions: string | null;
+  medicine: Pick<Medicine, "id" | "generic_name" | "brand_name" | "strength" | "sku">;
+}
+
+export interface Prescription {
+  id: number;
+  rx_number: string;
+  customer_id: number | null;
+  patient_name: string;
+  patient_phone: string | null;
+  doctor_name: string | null;
+  prescribed_date: string;
+  file_path: string | null;
+  sale_id: number | null;
+  status: PrescriptionStatus;
+  notes: string | null;
+  items_count?: number;
+  customer: Pick<Customer, "id" | "name" | "phone"> | null;
+  sale?: Pick<Sale, "id" | "invoice_number" | "status" | "total"> | null;
+  items?: PrescriptionItem[];
 }
 
 export interface CartLine {

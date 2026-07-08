@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { Link, useForm } from "@inertiajs/react";
+import { Link, router, useForm } from "@inertiajs/react";
 import { ChevronLeft, Edit2, ShoppingCart, DollarSign, Star, Check, ShoppingBag, FileText } from "lucide-react";
 import { AppLayout } from "@/Layouts/AppLayout";
 import { Btn } from "@/Components/ui/Btn";
 import { Card } from "@/Components/ui/Card";
 import { TableHeader } from "@/Components/ui/TableHeader";
+import { Badge } from "@/Components/ui/Badge";
 import { EmptyState } from "@/Components/ui/EmptyState";
 import { Modal } from "@/Components/ui/Modal";
 import { Toast } from "@/Components/ui/Toast";
@@ -17,6 +18,7 @@ export default function CustomerDetail({ customer: c }: { customer: Customer }) 
   const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
   const credit = Number(c.credit_balance);
   const payments = c.credit_payments ?? [];
+  const prescriptions = c.prescriptions ?? [];
 
   const editForm = useForm({
     name: c.name,
@@ -113,7 +115,24 @@ export default function CustomerDetail({ customer: c }: { customer: Customer }) 
 
         <Card className="mb-4">
           <div className="px-4 py-3 border-b border-border text-sm font-semibold text-foreground">Prescriptions</div>
-          <EmptyState icon={<FileText size={40} />} title="No prescriptions yet" description="Prescriptions uploaded for this customer will appear here." />
+          {prescriptions.length === 0 ? (
+            <EmptyState icon={<FileText size={40} />} title="No prescriptions yet" description="Prescriptions uploaded for this customer will appear here." />
+          ) : (
+            <table className="w-full">
+              <TableHeader cols={["RX ID", "Doctor", "Date", "Medicines", "Status"]} />
+              <tbody>
+                {prescriptions.map(rx => (
+                  <tr key={rx.id} onClick={() => router.visit(`/prescriptions/${rx.id}`)} className="border-b border-border last:border-0 hover:bg-muted/30 cursor-pointer">
+                    <td className="px-4 py-2.5 text-xs font-mono text-primary">{rx.rx_number}</td>
+                    <td className="px-4 py-2.5 text-xs text-muted-foreground">{rx.doctor_name ?? "—"}</td>
+                    <td className="px-4 py-2.5 text-xs font-mono text-muted-foreground">{rx.prescribed_date}</td>
+                    <td className="px-4 py-2.5 text-xs text-muted-foreground">{rx.items_count ?? 0} items</td>
+                    <td className="px-4 py-2.5"><Badge status={rx.status} /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </Card>
 
         <Card>

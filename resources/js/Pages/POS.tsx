@@ -1,10 +1,10 @@
 import { useMemo, useRef, useState } from "react";
 import { Link, router } from "@inertiajs/react";
-import { Scan, ShoppingCart, Clock, BookOpen, Trash2, X, ArrowLeft, CheckCircle2, PlayCircle } from "lucide-react";
+import { Scan, ShoppingCart, Clock, BookOpen, Trash2, X, ArrowLeft, CheckCircle2, PlayCircle, FileText } from "lucide-react";
 import { Btn } from "@/Components/ui/Btn";
 import { Modal } from "@/Components/ui/Modal";
 import { Toast } from "@/Components/ui/Toast";
-import type { CartLine, Customer, Medicine, Sale } from "@/types";
+import type { CartLine, Customer, Medicine, Prescription, Sale } from "@/types";
 
 type PayMethod = "Cash" | "Card" | "UPI" | "Credit";
 
@@ -12,9 +12,10 @@ interface Props {
   medicines: Medicine[];
   customers: Pick<Customer, "id" | "name" | "phone" | "credit_balance">[];
   heldSales: Sale[];
+  pendingPrescriptions: Prescription[];
 }
 
-export default function POS({ medicines, customers, heldSales }: Props) {
+export default function POS({ medicines, customers, heldSales, pendingPrescriptions }: Props) {
   const [cart, setCart] = useState<CartLine[]>([]);
   const [search, setSearch] = useState("");
   const [customerId, setCustomerId] = useState<string>("");
@@ -22,6 +23,8 @@ export default function POS({ medicines, customers, heldSales }: Props) {
   const [holdModal, setHoldModal] = useState(false);
   const [holdReference, setHoldReference] = useState("");
   const [resumeModal, setResumeModal] = useState(false);
+  const [prescriptionModal, setPrescriptionModal] = useState(false);
+  const [prescriptionId, setPrescriptionId] = useState<number | null>(null);
   const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
   const [processing, setProcessing] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
@@ -64,7 +67,7 @@ export default function POS({ medicines, customers, heldSales }: Props) {
     }));
   };
   const removeItem = (id: number) => setCart(c => c.filter(i => i.medicine_id !== id));
-  const clearCart = () => { setCart([]); setCustomerId(""); setSplitPayments([{ method: "Cash", amount: "" }]); };
+  const clearCart = () => { setCart([]); setCustomerId(""); setSplitPayments([{ method: "Cash", amount: "" }]); setPrescriptionId(null); };
 
   const buildItemsPayload = () => cart.map(i => ({ medicine_id: i.medicine_id, quantity: i.qty, unit_price: i.price, discount: i.discount, tax: i.tax }));
 
@@ -81,6 +84,7 @@ export default function POS({ medicines, customers, heldSales }: Props) {
     router.post("/sales", {
       customer_id: customerId || null,
       status: "Paid",
+      prescription_id: prescriptionId,
       items: buildItemsPayload(),
       payments: splitPayments.filter(p => parseFloat(p.amount) > 0).map(p => ({ method: p.method, amount: parseFloat(p.amount) })),
     }, {
@@ -120,6 +124,26 @@ export default function POS({ medicines, customers, heldSales }: Props) {
     setCustomerId(sale.customer_id ? String(sale.customer_id) : "");
     setResumeModal(false);
     setToast({ msg: "Held sale resumed", type: "success" });
+  };
+
+  const attachPrescription = (rx: Prescription) => {
+    setPrescriptionId(rx.id);
+    if (rx.customer_id) setCustomerId(String(rx.customer_id));
+    setCart(c => {
+      let next = c;
+      for (const item of rx.items ?? []) {
+        const medicine = medicines.find(m => m.id === item.medicine_id);
+        if (!medicine) continue;
+        const exists = next.find(i => i.medicine_id === medicine.id);
+        const qty = Math.min(item.quantity, medicine.stock);
+        next = exists
+          ? next.map(i => i.medicine_id === medicine.id ? { ...i, qty: Math.min(i.qty + item.quantity, medicine.stock) } : i)
+          : [...next, { medicine_id: medicine.id, name: medicine.name, sku: medicine.sku, qty, price: Number(medicine.selling_price), discount: Number(medicine.discount) || 0, tax: Number(medicine.tax) || 0, stock: medicine.stock }];
+      }
+      return next;
+    });
+    setPrescriptionModal(false);
+    setToast({ msg: `Attached ${rx.rx_number}`, type: "success" });
   };
 
   const updateSplitPayment = (idx: number, field: "method" | "amount", value: string) => {
@@ -193,8 +217,8 @@ export default function POS({ medicines, customers, heldSales }: Props) {
             <button onClick={() => setHoldModal(true)} disabled={cart.length === 0} className="px-2.5 py-1.5 text-xs border border-border rounded-md hover:bg-muted text-muted-foreground flex items-center gap-1.5 disabled:opacity-50">
               <Clock size={12} />Hold Sale
             </button>
-            <button className="px-2.5 py-1.5 text-xs border border-border rounded-md hover:bg-muted text-muted-foreground flex items-center gap-1.5">
-              <BookOpen size={12} />Prescription
+            <button onClick={() => setPrescriptionModal(true)} className={`px-2.5 py-1.5 text-xs border rounded-md flex items-center gap-1.5 ${prescriptionId ? "border-primary/40 bg-primary/5 text-primary" : "border-border hover:bg-muted text-muted-foreground"}`}>
+              <BookOpen size={12} />{prescriptionId ? "Prescription Linked" : "Prescription"}
             </button>
             <button onClick={clearCart} disabled={cart.length === 0} className="px-2.5 py-1.5 text-xs border border-red-200 rounded-md hover:bg-red-50 text-red-600 flex items-center gap-1.5 disabled:opacity-50">
               <Trash2 size={12} />Clear
@@ -364,6 +388,26 @@ export default function POS({ medicines, customers, heldSales }: Props) {
                     <div className="text-xs text-muted-foreground">{sale.items?.length ?? 0} items · ₹{Number(sale.total).toFixed(2)}</div>
                   </div>
                   <PlayCircle size={16} className="text-primary" />
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </Modal>
+
+      <Modal open={prescriptionModal} onClose={() => setPrescriptionModal(false)} title="Link Prescription">
+        <div className="p-2">
+          {pendingPrescriptions.length === 0 ? (
+            <div className="text-center text-sm text-muted-foreground py-8">No pending prescriptions</div>
+          ) : (
+            <div className="divide-y divide-border">
+              {pendingPrescriptions.map(rx => (
+                <button key={rx.id} onClick={() => attachPrescription(rx)} className="w-full text-left px-3 py-3 hover:bg-muted/40 flex items-center justify-between">
+                  <div>
+                    <div className="text-sm font-medium text-foreground">{rx.rx_number} · {rx.patient_name}</div>
+                    <div className="text-xs text-muted-foreground">{rx.items?.length ?? 0} medicines · {rx.prescribed_date}</div>
+                  </div>
+                  <FileText size={16} className="text-primary" />
                 </button>
               ))}
             </div>

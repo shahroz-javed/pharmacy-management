@@ -41,7 +41,10 @@ class CustomerController extends Controller
 
     public function show(Customer $customer): Response
     {
-        $customer->load(['creditPayments' => fn ($q) => $q->latest()]);
+        $customer->load([
+            'creditPayments' => fn ($q) => $q->latest(),
+            'prescriptions' => fn ($q) => $q->withCount('items')->latest('prescribed_date'),
+        ]);
 
         return Inertia::render('CustomerDetail', [
             'customer' => $customer,

@@ -7,6 +7,7 @@ use App\Http\Requests\StoreSaleRequest;
 use App\Http\Requests\StoreSaleReturnRequest;
 use App\Models\Customer;
 use App\Models\Medicine;
+use App\Models\Prescription;
 use App\Models\Sale;
 use App\Models\SaleReturn;
 use Illuminate\Http\RedirectResponse;
@@ -57,6 +58,7 @@ class SaleController extends Controller
             'medicines' => Medicine::where('stock', '>', 0)->orderBy('brand_name')->get(),
             'customers' => Customer::orderBy('name')->get(['id', 'name', 'phone', 'credit_balance']),
             'heldSales' => Sale::where('status', 'Held')->with('items.medicine')->latest()->get(),
+            'pendingPrescriptions' => Prescription::where('status', 'Pending')->with('items.medicine:id,generic_name,brand_name,strength,sku')->latest('prescribed_date')->get(),
         ]);
     }
 
@@ -108,6 +110,7 @@ class SaleController extends Controller
                     'status' => $data['status'],
                     'hold_reference' => $data['hold_reference'] ?? null,
                     'prescription_path' => $data['prescription_path'] ?? null,
+                    'prescription_id' => $data['prescription_id'] ?? null,
                     'sold_at' => $isPaid ? now() : null,
                 ]);
 
@@ -154,6 +157,10 @@ class SaleController extends Controller
                             $sale->update(['loyalty_points_earned' => $pointsEarned]);
                         }
                     }
+
+                    if (! empty($data['prescription_id'])) {
+                        Prescription::findOrFail($data['prescription_id'])->dispenseVia($sale);
+                    }
                 }
 
                 return $sale;
@@ -167,7 +174,7 @@ class SaleController extends Controller
 
     public function show(Sale $sale): Response
     {
-        $sale->load(['customer', 'items.medicine:id,generic_name,brand_name,strength,sku', 'payments', 'returns.items.saleItem.medicine:id,generic_name,brand_name,strength,sku', 'user:id,name']);
+        $sale->load(['customer', 'items.medicine:id,generic_name,brand_name,strength,sku', 'payments', 'returns.items.saleItem.medicine:id,generic_name,brand_name,strength,sku', 'user:id,name', 'prescription']);
 
         return Inertia::render('SaleDetail', [
             'sale' => $sale,
