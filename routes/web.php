@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\MedicineController;
+use App\Http\Controllers\PurchaseOrderController;
+use App\Http\Controllers\SupplierController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -25,25 +27,16 @@ Route::middleware('auth')->group(function () {
     Route::post('/inventory/transfers', [InventoryController::class, 'storeTransfer'])->name('inventory.transfers.store');
     Route::post('/inventory/audits', [InventoryController::class, 'storeAudit'])->name('inventory.audits.store');
 
-    Route::get('/purchases', function () {
-        return Inertia::render('Purchases');
-    });
+    Route::get('/purchases/add', [PurchaseOrderController::class, 'create'])->name('purchases.create');
+    Route::post('/purchases/{purchase}/receive', [PurchaseOrderController::class, 'receive'])->name('purchases.receive');
+    Route::resource('purchases', PurchaseOrderController::class)
+        ->only(['index', 'store', 'show'])
+        ->parameters(['purchases' => 'purchase']);
 
-    Route::get('/purchases/add', function () {
-        return Inertia::render('AddPurchase');
-    });
-
-    Route::get('/purchases/{id}', function (string $id) {
-        return Inertia::render('PurchaseDetail', ['id' => $id]);
-    });
-
-    Route::get('/suppliers', function () {
-        return Inertia::render('Suppliers');
-    });
-
-    Route::get('/suppliers/{id}', function (int $id) {
-        return Inertia::render('SupplierDetail', ['id' => $id]);
-    });
+    Route::resource('suppliers', SupplierController::class)
+        ->except(['create', 'edit'])
+        ->parameters(['suppliers' => 'supplier']);
+    Route::post('/suppliers/{supplier}/payments', [SupplierController::class, 'storePayment'])->name('suppliers.payments.store');
 
     Route::get('/customers', function () {
         return Inertia::render('Customers');

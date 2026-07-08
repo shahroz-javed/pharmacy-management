@@ -65,8 +65,10 @@ class Medicine extends Model
         ?string $reason = null,
         ?string $fromLocation = null,
         ?string $toLocation = null,
+        ?string $batchNumber = null,
+        ?string $expiryDate = null,
     ): StockMovement {
-        return DB::transaction(function () use ($type, $quantityIn, $quantityOut, $userId, $reference, $reason, $fromLocation, $toLocation) {
+        return DB::transaction(function () use ($type, $quantityIn, $quantityOut, $userId, $reference, $reason, $fromLocation, $toLocation, $batchNumber, $expiryDate) {
             $medicine = static::query()->lockForUpdate()->findOrFail($this->id);
 
             $newStock = $medicine->stock + $quantityIn - $quantityOut;
@@ -76,6 +78,16 @@ class Medicine extends Model
             }
 
             $medicine->stock = $newStock;
+
+            // Received stock replaces the shelf batch/expiry with the newest one; the
+            // full batch history still lives on the stock_movements row below.
+            if ($batchNumber !== null) {
+                $medicine->batch_number = $batchNumber;
+            }
+            if ($expiryDate !== null) {
+                $medicine->expiry_date = $expiryDate;
+            }
+
             $medicine->save();
 
             $movement = $medicine->stockMovements()->create([
@@ -88,6 +100,8 @@ class Medicine extends Model
                 'reason' => $reason,
                 'from_location' => $fromLocation,
                 'to_location' => $toLocation,
+                'batch_number' => $batchNumber,
+                'expiry_date' => $expiryDate,
             ]);
 
             $this->setRawAttributes($medicine->getAttributes());

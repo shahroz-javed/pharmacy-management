@@ -80,3 +80,49 @@ export interface Paginated<T> {
   per_page: number;
   total: number;
 }
+
+export interface Supplier {
+  id: number;
+  name: string;
+  contact_person: string | null;
+  phone: string | null;
+  email: string | null;
+  city: string | null;
+  address: string | null;
+  outstanding_balance: string;
+  orders?: number;
+  last_order?: string | null;
+  purchase_orders?: PurchaseOrder[];
+}
+
+export type PurchaseOrderStatus = "Ordered" | "Partial" | "Received";
+
+export interface PurchaseOrderItem {
+  id: number;
+  purchase_order_id: number;
+  medicine_id: number;
+  batch_number: string;
+  expiry_date: string;
+  quantity: number;
+  quantity_received: number;
+  unit_price: string;
+  tax: string;
+  total: string;
+  medicine: Pick<Medicine, "id" | "generic_name" | "brand_name" | "strength" | "sku">;
+}
+
+export interface PurchaseOrder {
+  id: number;
+  po_number: string;
+  supplier_id: number;
+  order_date: string;
+  expected_delivery: string | null;
+  invoice_number: string | null;
+  status: PurchaseOrderStatus;
+  subtotal: string;
+  tax_total: string;
+  total: string;
+  items_count?: number;
+  supplier: Pick<Supplier, "id" | "name">;
+  items?: PurchaseOrderItem[];
+}

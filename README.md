@@ -69,23 +69,25 @@ Backed by `App\Models\StockMovement`, `App\Http\Controllers\InventoryController`
 
 Covered by [tests/Feature/InventoryTest.php](tests/Feature/InventoryTest.php) (17 tests).
 
-### 5. Purchase Management — Static (UI only)
-- [ ] Purchase Orders
-- [ ] Suppliers
-- [ ] Receive Inventory
-- [ ] Purchase History
+### 5. Purchase Management — Dynamic
+- [x] Purchase Orders
+- [x] Suppliers
+- [x] Receive Inventory
+- [x] Purchase History
 - [ ] Purchase Invoice
 
-Renders `Purchases.tsx`, `AddPurchase.tsx`, `PurchaseDetail.tsx` from `mockData.ts`. No `purchases` table/controller yet.
+Backed by `App\Models\PurchaseOrder`, `App\Models\PurchaseOrderItem`, `App\Http\Controllers\PurchaseOrderController`, `purchase_orders`/`purchase_order_items` tables. Creating a PO records line items and puts the full amount on the supplier's `outstanding_balance` (credit). Receiving is a separate step (`PurchaseOrder::receive()`) that supports partial receipt per item — each unit received creates a `Purchase` stock movement (via `Medicine::applyStockMovement()`) and updates the medicine's current batch/expiry, while the item's own `batch_number`/`expiry_date`/`quantity_received` are kept on `purchase_order_items` for history. Order status auto-derives to Ordered / Partial / Received based on how much of each item has been received. Covered by [tests/Feature/PurchaseOrderTest.php](tests/Feature/PurchaseOrderTest.php) (7 tests).
 
-### 6. Supplier Management — Static (UI only)
-- [ ] Supplier List
-- [ ] Supplier Profile
-- [ ] Contact Details
-- [ ] Purchase History
-- [ ] Outstanding Balance
+Not yet implemented: **Purchase Invoice** (no PDF/printable invoice document — `PurchaseDetail.tsx` only has a plain `window.print()` of the page, not a formatted invoice).
 
-Renders `Suppliers.tsx`, `SupplierDetail.tsx` from `mockData.ts`. No `suppliers` table/controller yet.
+### 6. Supplier Management — Dynamic
+- [x] Supplier List
+- [x] Supplier Profile
+- [x] Contact Details
+- [x] Purchase History
+- [x] Outstanding Balance
+
+Backed by `App\Models\Supplier`, `App\Models\SupplierPayment`, `App\Http\Controllers\SupplierController`, `suppliers`/`supplier_payments` tables. `outstanding_balance` increases when a purchase order is created (credit) and decreases via `Supplier::recordPayment()`, which also writes a `supplier_payments` row (method, optional linked PO, notes) for a full payment history. Covered by [tests/Feature/SupplierTest.php](tests/Feature/SupplierTest.php).
 
 ### 7. Customer Management — Static (UI only)
 - [ ] Customer List
@@ -176,4 +178,4 @@ Renders `SettingsPage.tsx` from mock data. No settings table/controller yet.
 
 ## Suggested order for making remaining modules dynamic
 
-Purchases is the natural next step (it will create `Purchase` stock movements against the same ledger), followed by Suppliers/Customers (needed by Purchases/Sales/POS), then Sales/POS together (since POS creates Sales and `Sale` stock movements), then Prescriptions, Reports (reads across the above), and finally Users/Roles and Settings.
+Customers is the natural next step (needed by Sales/POS), then Sales/POS together (since POS creates Sales and `Sale` stock movements against the same ledger), then Prescriptions, Reports (reads across the above), and finally Users/Roles and Settings.

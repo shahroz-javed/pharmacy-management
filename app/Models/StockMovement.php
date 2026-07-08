@@ -7,13 +7,14 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['medicine_id', 'user_id', 'type', 'quantity_in', 'quantity_out', 'balance_after', 'reference', 'reason', 'from_location', 'to_location'])]
+#[Fillable(['medicine_id', 'user_id', 'type', 'quantity_in', 'quantity_out', 'balance_after', 'reference', 'reason', 'from_location', 'to_location', 'batch_number', 'expiry_date'])]
 class StockMovement extends Model
 {
     protected function casts(): array
     {
         return [
             'type' => StockMovementType::class,
+            'expiry_date' => 'date:Y-m-d',
         ];
     }
 
