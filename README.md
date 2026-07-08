@@ -131,19 +131,19 @@ Backed by `App\Models\Sale`, `App\Models\SaleItem`, `App\Models\SalePayment`, `A
 
 Backed by `App\Models\Prescription`, `App\Models\PrescriptionItem`, `App\Http\Controllers\PrescriptionController`, `prescriptions`/`prescription_items` tables. A prescription always has a free-text `patient_name`/`patient_phone` and an optional `customer_id` link (for walk-ins who aren't registered customers yet); `Prescription::generateRxNumber()` mirrors `Sale::generateInvoiceNumber()`'s `RX-YYMM-###` scheme. Uploading stores the file on the `public` disk (`prescriptions/`, same `Storage::disk('public')` pattern as `Medicine::image_path`) and optionally attaches medicine line items in the same request; `PrescriptionController::storeItems` lets the detail page fully replace the attached items later (delete-then-recreate, not a diff). Status starts `Pending` and flips to `Dispensed` only when a POS sale is checked out with that prescription linked (`Prescription::dispenseVia()`, called from `SaleController::store`) — there's no manual "mark dispensed" action, dispensing always goes through an actual sale. Patient History surfaces on the customer profile (`CustomerController::show` now eager-loads `prescriptions`) when a prescription is linked to a `Customer`. Covered by [tests/Feature/PrescriptionTest.php](tests/Feature/PrescriptionTest.php) (8 tests).
 
-### 11. Reports — Static (UI only)
-- [ ] Sales Reports
-- [ ] Purchase Reports
-- [ ] Inventory Reports
-- [ ] Profit Reports
-- [ ] Tax Reports
-- [ ] Expiry Reports
-- [ ] Top Selling Medicines
-- [ ] Dead Stock
-- [ ] Daily/Monthly Sales
-- [ ] Export (PDF/Excel/CSV)
+### 11. Reports — Dynamic
+- [x] Sales Reports
+- [x] Purchase Reports
+- [x] Inventory Reports
+- [x] Profit Reports
+- [x] Tax Reports
+- [x] Expiry Reports
+- [x] Top Selling Medicines
+- [x] Dead Stock
+- [x] Daily/Monthly Sales
+- [x] Export (CSV; PDF via browser print; no Excel)
 
-Renders `Reports.tsx` from `mockData.ts` (`salesData`). No aggregation queries or export wired up yet.
+Backed by `App\Http\Controllers\ReportController`, no new tables — every report is a read-only aggregation over `Sale`/`SaleItem`/`SaleReturn`/`PurchaseOrder`/`Medicine`/`StockMovement`. `GET /reports?type=&period=&from=&to=` resolves a date range (`daily`/`weekly`/`monthly`/`yearly`/`custom`) the same way `SaleController`/`PurchaseOrderController` already build their stats blocks (`whereBetween`, `sum`, `count`), then dispatches to one private method per report type, each returning a uniform `{ stats, chart?, rows }` shape. Notable ones: Profit joins `SaleItem` to `Medicine.purchase_price` for cost of goods; Dead Stock finds medicines with stock but no `Sale`-type `StockMovement` in the period; Top Selling groups `SaleItem` by medicine and ranks by revenue share. `Reports.tsx` renders the `rows` as a generic table (columns derived from whatever keys each report returns) plus a Recharts bar chart for report types that return a `chart` series — no new chart library, `recharts` was already installed and used by `Dashboard.tsx`. **Export**: CSV streams directly from `GET /reports/{type}/export` via `fputcsv` (no package); "PDF" triggers `window.print()` on the report view (no `barryvdh/laravel-dompdf`); Excel export was descoped — no `maatwebsite/excel` or equivalent was added, per the "no new dependencies without approval" rule. Covered by [tests/Feature/ReportTest.php](tests/Feature/ReportTest.php) (10 tests).
 
 ### 12. User Management — Static (UI only)
 - [ ] Users
@@ -178,4 +178,4 @@ Renders `SettingsPage.tsx` from mock data. No settings table/controller yet.
 
 ## Suggested order for making remaining modules dynamic
 
-Reports is the natural next step (it reads across Sales/Purchases/Inventory, all now dynamic), then Users/Roles and Settings.
+Users/Roles is the natural next step (needed before any real permission gating), then Notifications and Settings.

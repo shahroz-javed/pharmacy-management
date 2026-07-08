@@ -5,6 +5,7 @@ use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\MedicineController;
 use App\Http\Controllers\PrescriptionController;
 use App\Http\Controllers\PurchaseOrderController;
+use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SaleController;
 use App\Http\Controllers\SupplierController;
 use Illuminate\Support\Facades\Route;
@@ -56,9 +57,8 @@ Route::middleware('auth')->group(function () {
         ->parameters(['prescriptions' => 'prescription']);
     Route::post('/prescriptions/{prescription}/items', [PrescriptionController::class, 'storeItems'])->name('prescriptions.items.store');
 
-    Route::get('/reports', function () {
-        return Inertia::render('Reports');
-    });
+    Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
+    Route::get('/reports/{type}/export', [ReportController::class, 'export'])->name('reports.export');
 
     Route::get('/users', function () {
         return Inertia::render('Users');

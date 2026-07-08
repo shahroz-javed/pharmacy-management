@@ -260,3 +260,16 @@ export interface CartLine {
   tax: number;
   stock: number;
 }
+
+export type ReportType = "sales" | "purchase" | "inventory" | "profit" | "tax" | "expiry" | "topselling" | "deadstock" | "daily" | "monthly";
+
+export interface ReportChartPoint {
+  date: string;
+  sales: number;
+}
+
+export interface ReportData {
+  stats: Record<string, number>;
+  chart?: ReportChartPoint[];
+  rows: Record<string, string | number>[];
+}
