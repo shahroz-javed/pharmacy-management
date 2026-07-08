@@ -149,3 +149,81 @@ export interface PurchaseOrder {
   supplier: Pick<Supplier, "id" | "name"> | Supplier;
   items?: PurchaseOrderItem[];
 }
+
+export type SaleStatus = "Held" | "Paid" | "Partially Returned" | "Returned";
+export type PaymentMethod = "Cash" | "Card" | "UPI" | "Credit" | "Split";
+
+export interface SaleItem {
+  id: number;
+  sale_id: number;
+  medicine_id: number;
+  quantity: number;
+  quantity_returned: number;
+  unit_price: string;
+  discount: string;
+  tax: string;
+  total: string;
+  medicine: Pick<Medicine, "id" | "generic_name" | "brand_name" | "strength" | "sku">;
+}
+
+export interface SalePayment {
+  id: number;
+  sale_id: number;
+  method: Exclude<PaymentMethod, "Split">;
+  amount: string;
+}
+
+export interface SaleReturnItem {
+  id: number;
+  sale_return_id: number;
+  sale_item_id: number;
+  quantity: number;
+  amount: string;
+  sale_item: SaleItem;
+}
+
+export interface SaleReturn {
+  id: number;
+  sale_id: number;
+  user_id: number | null;
+  refund_amount: string;
+  refund_method: string;
+  reason: string | null;
+  created_at: string;
+  items: SaleReturnItem[];
+}
+
+export interface Sale {
+  id: number;
+  invoice_number: string;
+  customer_id: number | null;
+  subtotal: string;
+  discount_total: string;
+  tax_total: string;
+  total: string;
+  payment_method: PaymentMethod;
+  amount_paid: string;
+  loyalty_points_earned: number;
+  status: SaleStatus;
+  hold_reference: string | null;
+  prescription_path: string | null;
+  sold_at: string | null;
+  created_at: string;
+  items_count?: number;
+  customer: Pick<Customer, "id" | "name" | "phone" | "credit_balance"> | null;
+  user?: { id: number; name: string } | null;
+  items?: SaleItem[];
+  payments?: SalePayment[];
+  returns?: SaleReturn[];
+}
+
+export interface CartLine {
+  medicine_id: number;
+  name: string;
+  sku: string;
+  qty: number;
+  price: number;
+  discount: number;
+  tax: number;
+  stock: number;
+}

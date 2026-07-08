@@ -99,29 +99,29 @@ Backed by `App\Models\Supplier`, `App\Models\SupplierPayment`, `App\Http\Control
 
 Backed by `App\Models\Customer`, `App\Models\CustomerCreditPayment`, `App\Http\Controllers\CustomerController`, `customers`/`customer_credit_payments` tables. `credit_balance` and `loyalty_points` live directly on the customer; `Customer::recordCreditPayment()` decrements the balance and writes a `customer_credit_payments` row (method, optional notes) for a full payment history, mirroring `Supplier::recordPayment()`. `Customer::adjustLoyaltyPoints()` adds or redeems points (redeem floors at zero). Purchase History and Prescriptions sections render as empty states — they'll populate once Sales and Prescription Management become dynamic. Covered by [tests/Feature/CustomerTest.php](tests/Feature/CustomerTest.php) (10 tests).
 
-### 8. POS (Point of Sale) — Static (UI only)
-- [ ] Barcode Scanner
-- [ ] Search Medicine
-- [ ] Cart
-- [ ] Discount
-- [ ] Tax
-- [ ] Customer Selection
+### 8. POS (Point of Sale) — Dynamic
+- [x] Barcode Scanner
+- [x] Search Medicine
+- [x] Cart
+- [x] Discount
+- [x] Tax
+- [x] Customer Selection
 - [ ] Prescription Upload
-- [ ] Payment Methods
-- [ ] Split Payment
-- [ ] Print/Email Receipt
-- [ ] Hold/Resume Sale
+- [x] Payment Methods
+- [x] Split Payment
+- [x] Print/Email Receipt
+- [x] Hold/Resume Sale
 
-Renders `POS.tsx` from `mockData.ts` (`posCartSeed`, `medicines`). No sale persistence yet — cart/checkout is in-memory only.
+Backed by `App\Models\Sale`, `App\Models\SaleItem`, `App\Models\SalePayment`, `App\Http\Controllers\SaleController`. `GET /pos` loads in-stock medicines, customers, and any `Held` sales. Checkout posts to `sales.store`: `DB::transaction` computes line totals, creates the `Sale` + `SaleItem` rows, decrements stock per item via `Medicine::applyStockMovement(Sale, ...)` (same ledger as every other module), records one `SalePayment` row per tendered method (`payment_method` becomes `Split` when more than one method is used), increments `Customer::credit_balance` for any `Credit` portion (rejected server-side if no customer is selected), and awards 1 loyalty point per ₹100 via `Customer::adjustLoyaltyPoints()`. Holding a sale (`status: Held`) skips all of that — no stock movement, no payment — so it can be resumed later by reloading its cart from `/pos`'s `heldSales` prop. The barcode field is a plain search box matched against name/SKU/barcode client-side (no hardware scanner integration, but a scanner that types-and-Enters works with it). Prescription upload is not implemented yet — it depends on Prescription Management (§10). Covered by [tests/Feature/SaleTest.php](tests/Feature/SaleTest.php) (13 tests).
 
-### 9. Sales Management — Static (UI only)
-- [ ] Sales History
-- [ ] Sale Details
-- [ ] Return Sale
+### 9. Sales Management — Dynamic
+- [x] Sales History
+- [x] Sale Details
+- [x] Return Sale
 - [ ] Exchange
-- [ ] Refund
+- [x] Refund
 
-Renders `Sales.tsx`, `SaleDetail.tsx` from `mockData.ts`. No `sales` table/controller yet.
+`SaleController::index` lists everything except `Held` sales, with search/status/payment-method/date filters and today/week/returns stats computed from the DB. `SaleController::show` renders the full sale with items, payment breakdown, and return history. Returns go through `Sale::processReturn()` (mirrors `PurchaseOrder::receive()`): per selected item, validates the quantity against what's left to return, restocks via `applyStockMovement(Returned, ...)`, and writes a `SaleReturn` + `SaleReturnItem` row for the refund history; the sale's status auto-derives to `Partially Returned` or `Returned`. `SaleDetail.tsx` has a `hidden print:block` receipt (same pattern as `PurchaseDetail.tsx`'s invoice). Exchange (return + immediate replacement in one flow) has no dedicated UI yet — do a return, then a new POS sale.
 
 ### 10. Prescription Management — Static (UI only)
 - [ ] Upload Prescription
@@ -178,4 +178,4 @@ Renders `SettingsPage.tsx` from mock data. No settings table/controller yet.
 
 ## Suggested order for making remaining modules dynamic
 
-Sales/POS is the natural next step now that Customers exists (since POS creates Sales and `Sale` stock movements against the same ledger, and links to a `Customer`), then Prescriptions, Reports (reads across the above), and finally Users/Roles and Settings.
+Prescription Management is the natural next step now that Sales/POS exists (it needs a `sale_id`/`patient` link and feeds POS's prescription upload), then Reports (reads across Sales/Purchases/Inventory), and finally Users/Roles and Settings.

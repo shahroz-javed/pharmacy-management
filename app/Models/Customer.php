@@ -22,6 +22,11 @@ class Customer extends Model
         return $this->hasMany(CustomerCreditPayment::class);
     }
 
+    public function sales(): HasMany
+    {
+        return $this->hasMany(Sale::class);
+    }
+
     public function recordCreditPayment(float $amount, string $method, ?int $userId, ?string $notes = null): CustomerCreditPayment
     {
         $this->decrement('credit_balance', $amount);

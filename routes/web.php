@@ -4,6 +4,7 @@ use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\MedicineController;
 use App\Http\Controllers\PurchaseOrderController;
+use App\Http\Controllers\SaleController;
 use App\Http\Controllers\SupplierController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -15,9 +16,7 @@ Route::middleware('auth')->group(function () {
         return Inertia::render('Dashboard');
     });
 
-    Route::get('/pos', function () {
-        return Inertia::render('POS');
-    });
+    Route::get('/pos', [SaleController::class, 'pos'])->name('pos');
 
     Route::get('/medicines/add', [MedicineController::class, 'create'])->name('medicines.create');
     Route::resource('medicines', MedicineController::class)->except(['create'])->parameters(['medicines' => 'medicine']);
@@ -45,13 +44,10 @@ Route::middleware('auth')->group(function () {
     Route::post('/customers/{customer}/payments', [CustomerController::class, 'storeCreditPayment'])->name('customers.payments.store');
     Route::post('/customers/{customer}/loyalty', [CustomerController::class, 'storeLoyalty'])->name('customers.loyalty.store');
 
-    Route::get('/sales', function () {
-        return Inertia::render('Sales');
-    });
-
-    Route::get('/sales/{id}', function (string $id) {
-        return Inertia::render('SaleDetail', ['id' => $id]);
-    });
+    Route::resource('sales', SaleController::class)
+        ->only(['index', 'store', 'show'])
+        ->parameters(['sales' => 'sale']);
+    Route::post('/sales/{sale}/returns', [SaleController::class, 'storeReturn'])->name('sales.returns.store');
 
     Route::get('/prescriptions', function () {
         return Inertia::render('Prescriptions');

@@ -18,6 +18,8 @@ use InvalidArgumentException;
 ])]
 class Medicine extends Model
 {
+    protected $appends = ['name'];
+
     protected static function booted(): void
     {
         static::saving(function (Medicine $medicine) {
