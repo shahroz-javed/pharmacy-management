@@ -299,6 +299,18 @@ export interface Setting {
   font_size: string;
 }
 
+export type UserRole = "Owner" | "Manager" | "Cashier" | "Pharmacist" | "Inventory Staff";
+export type UserStatus = "Active" | "Inactive";
+
+export interface StaffUser {
+  id: number;
+  name: string;
+  email: string;
+  role: UserRole;
+  status: UserStatus;
+  created_at: string;
+}
+
 export type NotificationType = "warning" | "danger" | "info" | "success";
 
 export interface Notification {

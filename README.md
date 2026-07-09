@@ -145,12 +145,12 @@ Backed by `App\Models\Prescription`, `App\Models\PrescriptionItem`, `App\Http\Co
 
 Backed by `App\Http\Controllers\ReportController`, no new tables — every report is a read-only aggregation over `Sale`/`SaleItem`/`SaleReturn`/`PurchaseOrder`/`Medicine`/`StockMovement`. `GET /reports?type=&period=&from=&to=` resolves a date range (`daily`/`weekly`/`monthly`/`yearly`/`custom`) the same way `SaleController`/`PurchaseOrderController` already build their stats blocks (`whereBetween`, `sum`, `count`), then dispatches to one private method per report type, each returning a uniform `{ stats, chart?, rows }` shape. Notable ones: Profit joins `SaleItem` to `Medicine.purchase_price` for cost of goods; Dead Stock finds medicines with stock but no `Sale`-type `StockMovement` in the period; Top Selling groups `SaleItem` by medicine and ranks by revenue share. `Reports.tsx` renders the `rows` as a generic table (columns derived from whatever keys each report returns) plus a Recharts bar chart for report types that return a `chart` series — no new chart library, `recharts` was already installed and used by `Dashboard.tsx`. **Export**: CSV streams directly from `GET /reports/{type}/export` via `fputcsv` (no package); "PDF" triggers `window.print()` on the report view (no `barryvdh/laravel-dompdf`); Excel export was descoped — no `maatwebsite/excel` or equivalent was added, per the "no new dependencies without approval" rule. Covered by [tests/Feature/ReportTest.php](tests/Feature/ReportTest.php) (10 tests).
 
-### 12. User Management — Static (UI only)
-- [ ] Users
-- [ ] Roles
-- [ ] Permissions (Owner, Manager, Cashier, Pharmacist, Inventory Staff)
+### 12. User Management — Dynamic
+- [x] Users
+- [x] Roles
+- [x] Permissions (Owner, Manager, Cashier, Pharmacist, Inventory Staff)
 
-Renders `Users.tsx` from mock data. Only the base `users` table exists (for auth); no roles/permissions schema yet.
+Backed by `App\Http\Controllers\UserController` and the existing `App\Models\User`/`users` table, extended with `role` and `status` columns (migration `2026_07_09_094753_add_role_and_status_to_users_table`). `GET /users` lists staff with search-by-name/email; Add/Edit run through `StoreUserRequest` (name, email, role, password — password optional on edit, hashed via `Hash::make`), Delete is a plain `destroy`. A user can't deactivate or delete their own account (`UserController::update`/`destroy` reject it, enforced both server-side and in the UI by disabling/hiding those controls for the signed-in user's own row). Permissions are **display-only**: a static Role Permissions reference card lists what each of the five roles can do, but nothing in any controller actually gates on `role` yet — mirrors how Settings' Language/Printer/Barcode fields are stored but not wired to behavior. Covered by [tests/Feature/UserTest.php](tests/Feature/UserTest.php) (11 tests).
 
 ### 13. Notifications — Dynamic
 - [x] Low Stock
@@ -180,4 +180,4 @@ Backed by `App\Models\Setting`, `App\Http\Controllers\SettingController`, `setti
 
 ## Suggested order for making remaining modules dynamic
 
-Users/Roles is the last module still static (needed before any real permission gating).
+Every module is now dynamic. Remaining gaps: Dashboard still renders from `mockData.ts` (stats not DB-backed), Customer purchase history is an empty state, and permission enforcement (actually gating routes/actions by `User::role`) hasn't been built despite roles/permissions now existing on the User Management page.
