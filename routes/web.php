@@ -3,6 +3,7 @@
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\MedicineController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PrescriptionController;
 use App\Http\Controllers\PurchaseOrderController;
 use App\Http\Controllers\ReportController;
@@ -64,9 +65,9 @@ Route::middleware('auth')->group(function () {
         return Inertia::render('Users');
     });
 
-    Route::get('/notifications', function () {
-        return Inertia::render('NotificationsPage');
-    });
+    Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::post('/notifications/{key}/read', [NotificationController::class, 'markRead'])->name('notifications.read');
+    Route::post('/notifications/read-all', [NotificationController::class, 'markAllRead'])->name('notifications.read-all');
 
     Route::get('/settings', function () {
         return Inertia::render('SettingsPage');

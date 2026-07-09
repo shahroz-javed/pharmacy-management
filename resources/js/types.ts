@@ -273,3 +273,15 @@ export interface ReportData {
   chart?: ReportChartPoint[];
   rows: Record<string, string | number>[];
 }
+
+export type NotificationType = "warning" | "danger" | "info" | "success";
+
+export interface Notification {
+  id: string;
+  type: NotificationType;
+  title: string;
+  message: string;
+  time: string;
+  link: string;
+  read: boolean;
+}

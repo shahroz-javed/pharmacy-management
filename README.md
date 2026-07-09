@@ -152,14 +152,14 @@ Backed by `App\Http\Controllers\ReportController`, no new tables — every repor
 
 Renders `Users.tsx` from mock data. Only the base `users` table exists (for auth); no roles/permissions schema yet.
 
-### 13. Notifications — Static (UI only)
-- [ ] Low Stock
-- [ ] Medicine Expiring
-- [ ] Out of Stock
-- [ ] Pending Payments
-- [ ] New Purchase
+### 13. Notifications — Dynamic
+- [x] Low Stock
+- [x] Medicine Expiring
+- [x] Out of Stock
+- [x] Pending Payments
+- [x] New Purchase
 
-Renders `NotificationsPage.tsx` from mock data. No notifications table/events yet.
+Backed by `App\Http\Controllers\NotificationController` and `App\Models\NotificationState` (`notification_states` table, migration `2026_07_09_065418_create_notification_states_table`). There's no notifications table storing events — each type is computed live every request (same read-only-aggregation approach as `ReportController`): Low Stock / Out of Stock from `Medicine::status`, Medicine Expiring from `Medicine::expiry_date` within 90 days (including already-expired), Pending Payments from `Supplier::outstanding_balance` > 0, New Purchase from `PurchaseOrder`s created in the last 7 days. Each notification gets a stable id like `low-stock-{medicine_id}`; `notification_states` stores per-user `read_at` so read state persists across requests without a real events log. `POST /notifications/{key}/read` marks one read, `POST /notifications/read-all` marks every currently-generated notification read. The unread count is shared globally via `HandleInertiaRequests` as the `notifCount` Inertia prop, read by `AppLayout`/`TopBar`'s bell icon on every page (previously hardcoded to `3`). Covered by [tests/Feature/NotificationTest.php](tests/Feature/NotificationTest.php) (9 tests).
 
 ### 14. Settings — Static (UI only)
 - [ ] Business Information
@@ -178,4 +178,4 @@ Renders `SettingsPage.tsx` from mock data. No settings table/controller yet.
 
 ## Suggested order for making remaining modules dynamic
 
-Users/Roles is the natural next step (needed before any real permission gating), then Notifications and Settings.
+Users/Roles is the natural next step (needed before any real permission gating), then Settings.
