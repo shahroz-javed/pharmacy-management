@@ -13,6 +13,7 @@ import { StatCard } from "@/Components/ui/StatCard";
 import { TableHeader } from "@/Components/ui/TableHeader";
 import { Badge } from "@/Components/ui/Badge";
 import { salesData } from "@/mockData";
+import { useCurrency } from "@/lib/settings";
 
 const categoryData = [
   { name: "Antibiotics", value: 32 },
@@ -33,8 +34,9 @@ const recentSales = [
 ];
 
 export default function Dashboard() {
+  const { fmt, fmtCompact, symbol } = useCurrency();
   return (
-    <AppLayout notifCount={3}>
+    <AppLayout>
       <div className="p-5 space-y-5">
         <div className="flex items-center justify-between">
           <div>
@@ -51,10 +53,10 @@ export default function Dashboard() {
 
         {/* KPI Row */}
         <div className="grid grid-cols-4 gap-3">
-          <StatCard label="Today's Sales" value="₹18,240" sub="124 transactions" icon={<TrendingUp size={16} className="text-blue-600" />} trend="+12.4%" color="bg-blue-50 dark:bg-blue-950/20" />
-          <StatCard label="Monthly Revenue" value="₹4,82,600" sub="2,847 transactions" icon={<DollarSign size={16} className="text-emerald-600" />} trend="+8.2%" color="bg-emerald-50 dark:bg-emerald-950/20" />
-          <StatCard label="Gross Profit" value="₹1,68,340" sub="34.9% margin" icon={<PieChart size={16} className="text-violet-600" />} trend="+5.1%" color="bg-violet-50 dark:bg-violet-950/20" />
-          <StatCard label="Purchases" value="₹3,14,260" sub="This month" icon={<Truck size={16} className="text-amber-600" />} trend="-2.3%" color="bg-amber-50 dark:bg-amber-950/20" />
+          <StatCard label="Today's Sales" value={fmtCompact(18240)} sub="124 transactions" icon={<TrendingUp size={16} className="text-blue-600" />} trend="+12.4%" color="bg-blue-50 dark:bg-blue-950/20" />
+          <StatCard label="Monthly Revenue" value={fmtCompact(482600)} sub="2,847 transactions" icon={<DollarSign size={16} className="text-emerald-600" />} trend="+8.2%" color="bg-emerald-50 dark:bg-emerald-950/20" />
+          <StatCard label="Gross Profit" value={fmtCompact(168340)} sub="34.9% margin" icon={<PieChart size={16} className="text-violet-600" />} trend="+5.1%" color="bg-violet-50 dark:bg-violet-950/20" />
+          <StatCard label="Purchases" value={fmtCompact(314260)} sub="This month" icon={<Truck size={16} className="text-amber-600" />} trend="-2.3%" color="bg-amber-50 dark:bg-amber-950/20" />
         </div>
 
         {/* Alerts Row */}
@@ -109,8 +111,8 @@ export default function Dashboard() {
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.06)" />
                 <XAxis dataKey="date" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
-                <YAxis tick={{ fontSize: 11 }} tickLine={false} axisLine={false} tickFormatter={v => `₹${(v / 1000).toFixed(0)}k`} />
-                <Tooltip formatter={(v: number) => [`₹${v.toLocaleString()}`, ""]} />
+                <YAxis tick={{ fontSize: 11 }} tickLine={false} axisLine={false} tickFormatter={v => `${symbol}${(v / 1000).toFixed(0)}k`} />
+                <Tooltip formatter={(v: number) => [`${symbol}${v.toLocaleString()}`, ""]} />
                 <Area type="monotone" dataKey="sales" stroke="#1a56db" strokeWidth={2} fill="url(#sales)" />
                 <Area type="monotone" dataKey="profit" stroke="#059669" strokeWidth={2} fill="url(#profit)" />
               </AreaChart>
@@ -157,7 +159,7 @@ export default function Dashboard() {
                     <td className="px-4 py-2.5 text-xs font-mono text-primary">{s.id}</td>
                     <td className="px-4 py-2.5 text-xs text-foreground">{s.customer}</td>
                     <td className="px-4 py-2.5 text-xs text-muted-foreground">{s.items}</td>
-                    <td className="px-4 py-2.5 text-xs font-mono font-medium text-foreground">₹{s.total.toFixed(2)}</td>
+                    <td className="px-4 py-2.5 text-xs font-mono font-medium text-foreground">{fmt(s.total)}</td>
                     <td className="px-4 py-2.5 text-xs text-muted-foreground">{s.payment}</td>
                     <td className="px-4 py-2.5 text-xs text-muted-foreground font-mono">{s.time}</td>
                     <td className="px-4 py-2.5"><Badge status={s.status} /></td>

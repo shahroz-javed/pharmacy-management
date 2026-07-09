@@ -10,6 +10,7 @@ import { SearchInput } from "@/Components/ui/SearchInput";
 import { EmptyState } from "@/Components/ui/EmptyState";
 import { Modal } from "@/Components/ui/Modal";
 import { Toast } from "@/Components/ui/Toast";
+import { useCurrency } from "@/lib/settings";
 import type { Supplier } from "@/types";
 
 interface Props {
@@ -18,6 +19,7 @@ interface Props {
 }
 
 export default function Suppliers({ suppliers, filters }: Props) {
+  const { fmtCompact } = useCurrency();
   const [search, setSearch] = useState(filters.search ?? "");
   const [addModal, setAddModal] = useState(false);
   const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
@@ -45,7 +47,7 @@ export default function Suppliers({ suppliers, filters }: Props) {
   };
 
   return (
-    <AppLayout notifCount={3}>
+    <AppLayout>
       <div className="p-5">
         {toast && <Toast message={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
         <PageHeader
@@ -72,7 +74,7 @@ export default function Suppliers({ suppliers, filters }: Props) {
                         <Building2 size={18} className="text-violet-600" />
                       </div>
                       <span className={`text-xs font-mono px-2 py-0.5 rounded ${balance > 0 ? "bg-amber-50 text-amber-700 border border-amber-200" : "bg-emerald-50 text-emerald-700 border border-emerald-200"}`}>
-                        {balance > 0 ? `Due: ₹${balance.toLocaleString()}` : "Paid Up"}
+                        {balance > 0 ? `Due: ${fmtCompact(balance)}` : "Paid Up"}
                       </span>
                     </div>
                     <div className="text-sm font-semibold text-foreground">{s.name}</div>

@@ -15,6 +15,7 @@ import { Badge } from "@/Components/ui/Badge";
 import { EmptyState } from "@/Components/ui/EmptyState";
 import { Modal } from "@/Components/ui/Modal";
 import { Toast } from "@/Components/ui/Toast";
+import { useCurrency } from "@/lib/settings";
 import type { Medicine, StockMovement, Paginated } from "@/types";
 
 interface Props {
@@ -37,6 +38,7 @@ const typeStyles: Record<string, string> = {
 };
 
 export default function Inventory({ medicines, ledger, stats, filters }: Props) {
+  const { fmt } = useCurrency();
   const [view, setView] = useState<View>("stock");
   const [adjustModal, setAdjustModal] = useState(false);
   const [returnModal, setReturnModal] = useState(false);
@@ -144,7 +146,7 @@ export default function Inventory({ medicines, ledger, stats, filters }: Props) 
   };
 
   return (
-    <AppLayout notifCount={3}>
+    <AppLayout>
       <div className="p-5">
         {toast && <Toast message={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
         <PageHeader
@@ -210,7 +212,7 @@ export default function Inventory({ medicines, ledger, stats, filters }: Props) 
                         </div>
                       </td>
                       <td className="px-4 py-2.5 text-xs font-mono text-muted-foreground">{m.reorder_level}</td>
-                      <td className="px-4 py-2.5 text-xs font-mono font-medium text-foreground">₹{value.toFixed(0)}</td>
+                      <td className="px-4 py-2.5 text-xs font-mono font-medium text-foreground">{fmt(value, 0)}</td>
                       <td className="px-4 py-2.5"><Badge status={m.status} /></td>
                       <td className="px-4 py-2.5">
                         <button onClick={() => { adjustForm.setData("medicine_id", String(m.id)); setAdjustModal(true); }} className="text-xs text-primary hover:underline">Adjust</button>

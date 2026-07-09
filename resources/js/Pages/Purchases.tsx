@@ -11,6 +11,7 @@ import { Toolbar } from "@/Components/ui/Toolbar";
 import { TableHeader } from "@/Components/ui/TableHeader";
 import { Badge } from "@/Components/ui/Badge";
 import { EmptyState } from "@/Components/ui/EmptyState";
+import { useCurrency } from "@/lib/settings";
 import type { PurchaseOrder, Supplier } from "@/types";
 
 interface Props {
@@ -21,6 +22,7 @@ interface Props {
 }
 
 export default function Purchases({ orders, suppliers, stats, filters }: Props) {
+  const { fmt, fmtCompact } = useCurrency();
   const [search, setSearch] = useState(filters.search ?? "");
   const [supplierId, setSupplierId] = useState(filters.supplier_id ?? "");
   const [status, setStatus] = useState(filters.status ?? "All");
@@ -34,7 +36,7 @@ export default function Purchases({ orders, suppliers, stats, filters }: Props) 
   };
 
   return (
-    <AppLayout notifCount={3}>
+    <AppLayout>
       <div className="p-5">
         <PageHeader
           title="Purchase Management"
@@ -49,7 +51,7 @@ export default function Purchases({ orders, suppliers, stats, filters }: Props) 
           }
         />
         <div className="grid grid-cols-3 gap-3 mb-5">
-          <StatCard label="This Month" value={`₹${Number(stats.month_total).toLocaleString()}`} sub={`${stats.month_count} purchase orders`} icon={<Truck size={16} className="text-blue-600" />} color="bg-blue-50 dark:bg-blue-950/20" />
+          <StatCard label="This Month" value={fmtCompact(stats.month_total)} sub={`${stats.month_count} purchase orders`} icon={<Truck size={16} className="text-blue-600" />} color="bg-blue-50 dark:bg-blue-950/20" />
           <StatCard label="Pending Orders" value={String(stats.pending_orders)} icon={<Clock size={16} className="text-amber-600" />} color="bg-amber-50 dark:bg-amber-950/20" />
           <StatCard label="Suppliers" value={String(stats.supplier_count)} icon={<Building2 size={16} className="text-violet-600" />} color="bg-violet-50 dark:bg-violet-950/20" />
         </div>
@@ -76,7 +78,7 @@ export default function Purchases({ orders, suppliers, stats, filters }: Props) 
                     <td className="px-4 py-2.5 text-sm text-foreground">{po.supplier.name}</td>
                     <td className="px-4 py-2.5 text-xs font-mono text-muted-foreground">{po.order_date}</td>
                     <td className="px-4 py-2.5 text-xs text-muted-foreground">{po.items_count ?? 0} items</td>
-                    <td className="px-4 py-2.5 text-sm font-mono font-semibold text-foreground">₹{Number(po.total).toLocaleString()}</td>
+                    <td className="px-4 py-2.5 text-sm font-mono font-semibold text-foreground">{fmtCompact(po.total)}</td>
                     <td className="px-4 py-2.5"><Badge status={po.status} /></td>
                     <td className="px-4 py-2.5">
                       <div className="flex gap-1">

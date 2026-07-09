@@ -4,6 +4,7 @@ import { Scan, ShoppingCart, Clock, BookOpen, Trash2, X, ArrowLeft, CheckCircle2
 import { Btn } from "@/Components/ui/Btn";
 import { Modal } from "@/Components/ui/Modal";
 import { Toast } from "@/Components/ui/Toast";
+import { useCurrency } from "@/lib/settings";
 import type { CartLine, Customer, Medicine, Prescription, Sale } from "@/types";
 
 type PayMethod = "Cash" | "Card" | "UPI" | "Credit";
@@ -16,6 +17,7 @@ interface Props {
 }
 
 export default function POS({ medicines, customers, heldSales, pendingPrescriptions }: Props) {
+  const { fmt } = useCurrency();
   const [cart, setCart] = useState<CartLine[]>([]);
   const [search, setSearch] = useState("");
   const [customerId, setCustomerId] = useState<string>("");
@@ -191,7 +193,7 @@ export default function POS({ medicines, customers, heldSales, pendingPrescripti
               <div className="text-xs font-medium text-foreground leading-tight">{m.name}</div>
               <div className="flex items-center justify-between mt-0.5">
                 <span className="text-xs text-muted-foreground font-mono">{m.sku}</span>
-                <span className="text-xs font-mono font-semibold text-foreground">₹{Number(m.selling_price).toFixed(2)}</span>
+                <span className="text-xs font-mono font-semibold text-foreground">{fmt(m.selling_price)}</span>
               </div>
               <div className="text-xs text-muted-foreground">Stock: {m.stock}</div>
             </button>
@@ -263,7 +265,7 @@ export default function POS({ medicines, customers, heldSales, pendingPrescripti
                           <button onClick={() => updateQty(item.medicine_id, 1)} className="w-6 h-6 rounded border border-border flex items-center justify-center hover:bg-muted text-foreground text-sm">+</button>
                         </div>
                       </td>
-                      <td className="px-3 py-2.5 font-mono text-sm text-foreground">₹{item.price.toFixed(2)}</td>
+                      <td className="px-3 py-2.5 font-mono text-sm text-foreground">{fmt(item.price)}</td>
                       <td className="px-3 py-2.5">
                         <input
                           type="number"
@@ -273,7 +275,7 @@ export default function POS({ medicines, customers, heldSales, pendingPrescripti
                         />
                       </td>
                       <td className="px-3 py-2.5 text-sm font-mono text-muted-foreground">{item.tax}%</td>
-                      <td className="px-3 py-2.5 font-mono text-sm font-semibold text-foreground">₹{lineTotal.toFixed(2)}</td>
+                      <td className="px-3 py-2.5 font-mono text-sm font-semibold text-foreground">{fmt(lineTotal)}</td>
                       <td className="px-3 py-2.5">
                         <button onClick={() => removeItem(item.medicine_id)} className="p-1 hover:bg-red-50 rounded text-muted-foreground hover:text-red-600 transition-colors"><X size={13} /></button>
                       </td>
@@ -295,13 +297,13 @@ export default function POS({ medicines, customers, heldSales, pendingPrescripti
 
         <div className="flex-1 p-4 space-y-3 overflow-y-auto">
           <div className="space-y-2 text-sm">
-            <div className="flex justify-between"><span className="text-muted-foreground">Subtotal</span><span className="font-mono font-medium">₹{subtotal.toFixed(2)}</span></div>
-            <div className="flex justify-between text-amber-600"><span>Discount</span><span className="font-mono">−₹{discountAmt.toFixed(2)}</span></div>
-            <div className="flex justify-between text-muted-foreground"><span>Tax (GST)</span><span className="font-mono">+₹{taxAmt.toFixed(2)}</span></div>
+            <div className="flex justify-between"><span className="text-muted-foreground">Subtotal</span><span className="font-mono font-medium">{fmt(subtotal)}</span></div>
+            <div className="flex justify-between text-amber-600"><span>Discount</span><span className="font-mono">−{fmt(discountAmt)}</span></div>
+            <div className="flex justify-between text-muted-foreground"><span>Tax (GST)</span><span className="font-mono">+{fmt(taxAmt)}</span></div>
             <div className="h-px bg-border my-2" />
             <div className="flex justify-between font-semibold text-base">
               <span>Total</span>
-              <span className="font-mono text-primary">₹{total.toFixed(2)}</span>
+              <span className="font-mono text-primary">{fmt(total)}</span>
             </div>
           </div>
 
@@ -347,14 +349,14 @@ export default function POS({ medicines, customers, heldSales, pendingPrescripti
             </div>
             <div className="flex justify-between text-xs mt-2 pt-2 border-t border-border">
               <span className="text-muted-foreground">Entered</span>
-              <span className={`font-mono ${amountEntered + 0.01 < total ? "text-red-600" : "text-emerald-600"}`}>₹{amountEntered.toFixed(2)}</span>
+              <span className={`font-mono ${amountEntered + 0.01 < total ? "text-red-600" : "text-emerald-600"}`}>{fmt(amountEntered)}</span>
             </div>
           </div>
         </div>
 
         <div className="p-4 border-t border-border space-y-2">
           <Btn variant="primary" className="w-full justify-center" disabled={cart.length === 0 || processing} onClick={charge}>
-            <CheckCircle2 size={15} />Charge ₹{total.toFixed(2)}
+            <CheckCircle2 size={15} />Charge {fmt(total)}
           </Btn>
         </div>
       </div>
@@ -385,7 +387,7 @@ export default function POS({ medicines, customers, heldSales, pendingPrescripti
                 <button key={sale.id} onClick={() => resumeSale(sale)} className="w-full text-left px-3 py-3 hover:bg-muted/40 flex items-center justify-between">
                   <div>
                     <div className="text-sm font-medium text-foreground">{sale.hold_reference || sale.invoice_number}</div>
-                    <div className="text-xs text-muted-foreground">{sale.items?.length ?? 0} items · ₹{Number(sale.total).toFixed(2)}</div>
+                    <div className="text-xs text-muted-foreground">{sale.items?.length ?? 0} items · {fmt(sale.total)}</div>
                   </div>
                   <PlayCircle size={16} className="text-primary" />
                 </button>

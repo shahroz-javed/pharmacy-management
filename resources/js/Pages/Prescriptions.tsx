@@ -82,7 +82,7 @@ export default function Prescriptions({ prescriptions, customers, medicines, fil
   };
 
   return (
-    <AppLayout notifCount={3}>
+    <AppLayout>
       <div className="p-5">
         {toast && <Toast message={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
         <PageHeader

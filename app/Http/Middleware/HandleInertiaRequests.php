@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Http\Controllers\NotificationController;
+use App\Models\Setting;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -44,6 +45,7 @@ class HandleInertiaRequests extends Middleware
             'notifCount' => fn () => $request->user()
                 ? app(NotificationController::class)->unreadCountFor($request->user()->id)
                 : 0,
+            'settings' => fn () => $request->user() ? Setting::current() : null,
         ];
     }
 }

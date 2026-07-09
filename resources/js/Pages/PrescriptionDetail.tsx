@@ -7,6 +7,7 @@ import { Card } from "@/Components/ui/Card";
 import { Badge } from "@/Components/ui/Badge";
 import { EmptyState } from "@/Components/ui/EmptyState";
 import { Toast } from "@/Components/ui/Toast";
+import { useCurrency } from "@/lib/settings";
 import type { Medicine, Prescription } from "@/types";
 
 interface Props {
@@ -17,6 +18,7 @@ interface Props {
 type DraftItem = { medicine_id: string; quantity: string; dosage_instructions: string };
 
 export default function PrescriptionDetail({ prescription: rx, medicines }: Props) {
+  const { fmtCompact } = useCurrency();
   const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
   const items = rx.items ?? [];
   const isImage = rx.file_path ? /\.(png|jpe?g|gif|webp)$/i.test(rx.file_path) : false;
@@ -42,7 +44,7 @@ export default function PrescriptionDetail({ prescription: rx, medicines }: Prop
   };
 
   return (
-    <AppLayout notifCount={3}>
+    <AppLayout>
       <div className="p-5 max-w-4xl">
         {toast && <Toast message={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
         <div className="flex items-center gap-2 mb-5">
@@ -74,7 +76,7 @@ export default function PrescriptionDetail({ prescription: rx, medicines }: Prop
               <div className="mt-4 pt-4 border-t border-border flex items-center justify-between">
                 <div>
                   <span className="text-xs text-muted-foreground block mb-0.5">Dispensed via Sale</span>
-                  <span className="font-mono text-sm text-foreground">{rx.sale.invoice_number} · ₹{Number(rx.sale.total).toLocaleString()}</span>
+                  <span className="font-mono text-sm text-foreground">{rx.sale.invoice_number} · {fmtCompact(rx.sale.total)}</span>
                 </div>
                 <Link href={`/sales/${rx.sale.id}`} className="text-primary hover:underline text-xs flex items-center gap-1">
                   View Sale <ExternalLink size={11} />

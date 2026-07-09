@@ -8,6 +8,7 @@ use App\Http\Controllers\PrescriptionController;
 use App\Http\Controllers\PurchaseOrderController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SaleController;
+use App\Http\Controllers\SettingController;
 use App\Http\Controllers\SupplierController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -69,7 +70,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/notifications/{key}/read', [NotificationController::class, 'markRead'])->name('notifications.read');
     Route::post('/notifications/read-all', [NotificationController::class, 'markAllRead'])->name('notifications.read-all');
 
-    Route::get('/settings', function () {
-        return Inertia::render('SettingsPage');
-    });
+    Route::get('/settings', [SettingController::class, 'index'])->name('settings.index');
+    Route::put('/settings', [SettingController::class, 'update'])->name('settings.update');
+    Route::get('/settings/backup', [SettingController::class, 'backup'])->name('settings.backup');
 });

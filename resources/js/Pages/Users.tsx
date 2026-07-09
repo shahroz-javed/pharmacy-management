@@ -23,7 +23,7 @@ const roleColors: Record<string, string> = {
 
 export default function Users() {
   return (
-    <AppLayout notifCount={3}>
+    <AppLayout>
       <div className="p-5">
         <PageHeader
           title="Users & Roles"

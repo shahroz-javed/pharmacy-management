@@ -9,6 +9,7 @@ import { Badge } from "@/Components/ui/Badge";
 import { EmptyState } from "@/Components/ui/EmptyState";
 import { Modal } from "@/Components/ui/Modal";
 import { Toast } from "@/Components/ui/Toast";
+import { useCurrency, useSettings } from "@/lib/settings";
 import type { Medicine, Sale } from "@/types";
 
 type Mode = "return" | "exchange";
@@ -20,6 +21,8 @@ interface Props {
 }
 
 export default function SaleDetail({ sale: s, medicines }: Props) {
+  const settings = useSettings();
+  const { fmt, fmtCompact } = useCurrency();
   const [modalMode, setModalMode] = useState<Mode | null>(null);
   const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
   const items = s.items ?? [];
@@ -95,7 +98,7 @@ export default function SaleDetail({ sale: s, medicines }: Props) {
   };
 
   return (
-    <AppLayout notifCount={3}>
+    <AppLayout>
       <div className="p-5 max-w-4xl print:hidden">
         {toast && <Toast message={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
         <div className="flex items-center gap-2 mb-5">
@@ -120,9 +123,9 @@ export default function SaleDetail({ sale: s, medicines }: Props) {
             ["Customer", s.customer?.name ?? "Walk-in"],
             ["Date & Time", s.sold_at ? new Date(s.sold_at).toLocaleString() : "—"],
             ["Payment Method", s.payment_method],
-            ["Amount Paid", `₹${Number(s.amount_paid).toLocaleString()}`],
+            ["Amount Paid", fmtCompact(s.amount_paid)],
             ["Loyalty Points Earned", String(s.loyalty_points_earned)],
-            ["Total", `₹${Number(s.total).toLocaleString()}`],
+            ["Total", fmtCompact(s.total)],
           ].map(([l, v]) => (
             <div key={l} className="bg-card border border-border rounded-lg p-3">
               <div className="text-xs text-muted-foreground mb-0.5">{l}</div>
@@ -141,20 +144,20 @@ export default function SaleDetail({ sale: s, medicines }: Props) {
                   <td className="px-4 py-2.5 text-sm text-foreground">{item.medicine.brand_name} {item.medicine.strength}</td>
                   <td className="px-4 py-2.5 text-xs font-mono text-foreground">{item.quantity}</td>
                   <td className="px-4 py-2.5 text-xs font-mono text-muted-foreground">{item.quantity_returned}</td>
-                  <td className="px-4 py-2.5 text-xs font-mono text-foreground">₹{Number(item.unit_price).toFixed(2)}</td>
+                  <td className="px-4 py-2.5 text-xs font-mono text-foreground">{fmt(item.unit_price)}</td>
                   <td className="px-4 py-2.5 text-xs font-mono text-muted-foreground">{item.discount}%</td>
                   <td className="px-4 py-2.5 text-xs font-mono text-muted-foreground">{item.tax}%</td>
-                  <td className="px-4 py-2.5 text-xs font-mono font-semibold text-foreground">₹{Number(item.total).toFixed(2)}</td>
+                  <td className="px-4 py-2.5 text-xs font-mono font-semibold text-foreground">{fmt(item.total)}</td>
                 </tr>
               ))}
             </tbody>
           </table>
           <div className="px-4 py-3 border-t border-border flex justify-end">
             <div className="w-56 space-y-1 text-sm">
-              <div className="flex justify-between"><span className="text-muted-foreground">Subtotal</span><span className="font-mono">₹{Number(s.subtotal).toFixed(2)}</span></div>
-              <div className="flex justify-between text-amber-600"><span>Discount</span><span className="font-mono">−₹{Number(s.discount_total).toFixed(2)}</span></div>
-              <div className="flex justify-between text-muted-foreground"><span>Tax</span><span className="font-mono">+₹{Number(s.tax_total).toFixed(2)}</span></div>
-              <div className="flex justify-between font-semibold border-t border-border pt-1 mt-1"><span>Total</span><span className="font-mono">₹{Number(s.total).toFixed(2)}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Subtotal</span><span className="font-mono">{fmt(s.subtotal)}</span></div>
+              <div className="flex justify-between text-amber-600"><span>Discount</span><span className="font-mono">−{fmt(s.discount_total)}</span></div>
+              <div className="flex justify-between text-muted-foreground"><span>Tax</span><span className="font-mono">+{fmt(s.tax_total)}</span></div>
+              <div className="flex justify-between font-semibold border-t border-border pt-1 mt-1"><span>Total</span><span className="font-mono">{fmt(s.total)}</span></div>
             </div>
           </div>
         </Card>
@@ -168,7 +171,7 @@ export default function SaleDetail({ sale: s, medicines }: Props) {
                 {payments.map(p => (
                   <tr key={p.id} className="border-b border-border last:border-0">
                     <td className="px-4 py-2.5 text-sm text-foreground">{p.method}</td>
-                    <td className="px-4 py-2.5 text-xs font-mono text-foreground">₹{Number(p.amount).toFixed(2)}</td>
+                    <td className="px-4 py-2.5 text-xs font-mono text-foreground">{fmt(p.amount)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -188,7 +191,7 @@ export default function SaleDetail({ sale: s, medicines }: Props) {
                   <tr key={r.id} className="border-b border-border last:border-0 hover:bg-muted/30">
                     <td className="px-4 py-2.5 text-xs font-mono text-muted-foreground">{new Date(r.created_at).toLocaleString()}</td>
                     <td className="px-4 py-2.5 text-xs text-muted-foreground">{r.items.map(ri => `${ri.sale_item.medicine.brand_name} ×${ri.quantity}`).join(", ")}</td>
-                    <td className="px-4 py-2.5 text-xs font-mono font-semibold text-foreground">₹{Number(r.refund_amount).toFixed(2)}</td>
+                    <td className="px-4 py-2.5 text-xs font-mono font-semibold text-foreground">{fmt(r.refund_amount)}</td>
                     <td className="px-4 py-2.5 text-xs text-muted-foreground">{r.refund_method}</td>
                     <td className="px-4 py-2.5 text-xs">
                       {r.exchange_sale ? (
@@ -208,7 +211,7 @@ export default function SaleDetail({ sale: s, medicines }: Props) {
         <Modal open={modalMode !== null} onClose={closeModal} title={modalMode === "exchange" ? "Process Exchange" : "Process Return / Refund"} width="max-w-2xl">
           <div className="p-5 space-y-4">
             <div className="p-3 bg-muted/50 rounded-md text-xs text-muted-foreground">
-              Invoice: <span className="font-mono font-medium text-foreground">{s.invoice_number}</span> · ₹{Number(s.total).toFixed(2)} · {s.customer?.name ?? "Walk-in"}
+              Invoice: <span className="font-mono font-medium text-foreground">{s.invoice_number}</span> · {fmt(s.total)} · {s.customer?.name ?? "Walk-in"}
             </div>
             <div>
               <label className="text-xs font-medium text-foreground block mb-2">Select Items to Return</label>
@@ -253,7 +256,7 @@ export default function SaleDetail({ sale: s, medicines }: Props) {
                       <div key={idx} className="flex items-center gap-1.5">
                         <select value={row.medicine_id} onChange={e => updateReplacement(idx, "medicine_id", e.target.value)} className="flex-1 text-xs border border-border rounded-md px-2 py-1.5 bg-input-background focus:outline-none">
                           <option value="">Select medicine…</option>
-                          {medicines.map(m => <option key={m.id} value={m.id}>{m.brand_name} {m.strength} · ₹{Number(m.selling_price).toFixed(2)}</option>)}
+                          {medicines.map(m => <option key={m.id} value={m.id}>{m.brand_name} {m.strength} · {fmt(m.selling_price)}</option>)}
                         </select>
                         <input type="number" min={1} value={row.quantity} onChange={e => updateReplacement(idx, "quantity", e.target.value)} className="w-14 text-center text-xs font-mono border border-border rounded-md px-2 py-1.5 bg-input-background focus:outline-none" />
                         <input type="number" step="0.01" value={row.unit_price} onChange={e => updateReplacement(idx, "unit_price", e.target.value)} className="w-20 text-center text-xs font-mono border border-border rounded-md px-2 py-1.5 bg-input-background focus:outline-none" />
@@ -264,11 +267,11 @@ export default function SaleDetail({ sale: s, medicines }: Props) {
                 )}
                 {data.replacement_items.length > 0 && (
                   <div className="mt-3 p-3 bg-muted/50 rounded-md text-xs space-y-1">
-                    <div className="flex justify-between"><span className="text-muted-foreground">Returned value</span><span className="font-mono">₹{returnedValue.toFixed(2)}</span></div>
-                    <div className="flex justify-between"><span className="text-muted-foreground">Replacement value</span><span className="font-mono">₹{replacementValue.toFixed(2)}</span></div>
+                    <div className="flex justify-between"><span className="text-muted-foreground">Returned value</span><span className="font-mono">{fmt(returnedValue)}</span></div>
+                    <div className="flex justify-between"><span className="text-muted-foreground">Replacement value</span><span className="font-mono">{fmt(replacementValue)}</span></div>
                     <div className="flex justify-between font-semibold border-t border-border pt-1 mt-1">
                       <span>{priceDifference > 0 ? "Customer pays" : priceDifference < 0 ? "Refund to customer" : "Even exchange"}</span>
-                      <span className="font-mono">₹{Math.abs(priceDifference).toFixed(2)}</span>
+                      <span className="font-mono">{fmt(Math.abs(priceDifference))}</span>
                     </div>
                   </div>
                 )}
@@ -301,10 +304,15 @@ export default function SaleDetail({ sale: s, medicines }: Props) {
       {/* Printable receipt — only rendered visually when printing */}
       <div className="hidden print:block p-6">
         <div className="flex justify-between mb-6">
-          <div>
-            <div className="text-lg font-semibold text-black">PharmaPro Medical Store</div>
-            <div className="text-xs text-gray-600">123, MG Road, Mumbai</div>
-            <div className="text-xs text-gray-600">GST: 27AABCU9603R1ZX</div>
+          <div className="flex items-start gap-3">
+            {settings.receipt_show_logo && settings.logo_path && (
+              <img src={`/storage/${settings.logo_path}`} alt={settings.pharmacy_name} className="w-12 h-12 object-cover rounded" />
+            )}
+            <div>
+              <div className="text-lg font-semibold text-black">{settings.pharmacy_name}</div>
+              {settings.address && <div className="text-xs text-gray-600">{settings.address}</div>}
+              {settings.gst_number && <div className="text-xs text-gray-600">GST: {settings.gst_number}</div>}
+            </div>
           </div>
           <div className="text-right">
             <div className="text-sm font-bold text-black">SALE RECEIPT</div>
@@ -340,9 +348,9 @@ export default function SaleDetail({ sale: s, medicines }: Props) {
               <tr key={item.id} className="border-b border-gray-300">
                 <td className="py-2 text-black">{item.medicine.brand_name} {item.medicine.strength}</td>
                 <td className="py-2 font-mono text-black text-right">{item.quantity}</td>
-                <td className="py-2 font-mono text-black text-right">₹{Number(item.unit_price).toFixed(2)}</td>
+                <td className="py-2 font-mono text-black text-right">{fmt(item.unit_price)}</td>
                 <td className="py-2 font-mono text-gray-700 text-right">{item.tax}%</td>
-                <td className="py-2 font-mono font-semibold text-black text-right">₹{Number(item.total).toFixed(2)}</td>
+                <td className="py-2 font-mono font-semibold text-black text-right">{fmt(item.total)}</td>
               </tr>
             ))}
           </tbody>
@@ -350,16 +358,16 @@ export default function SaleDetail({ sale: s, medicines }: Props) {
 
         <div className="flex justify-end">
           <div className="w-64 space-y-1.5 text-sm border-t-2 border-black pt-2">
-            <div className="flex justify-between"><span className="text-gray-600">Subtotal</span><span className="font-mono text-black">₹{Number(s.subtotal).toFixed(2)}</span></div>
-            <div className="flex justify-between"><span className="text-gray-600">Discount</span><span className="font-mono text-black">−₹{Number(s.discount_total).toFixed(2)}</span></div>
-            <div className="flex justify-between"><span className="text-gray-600">Tax</span><span className="font-mono text-black">₹{Number(s.tax_total).toFixed(2)}</span></div>
+            <div className="flex justify-between"><span className="text-gray-600">Subtotal</span><span className="font-mono text-black">{fmt(s.subtotal)}</span></div>
+            <div className="flex justify-between"><span className="text-gray-600">Discount</span><span className="font-mono text-black">−{fmt(s.discount_total)}</span></div>
+            <div className="flex justify-between"><span className="text-gray-600">Tax</span><span className="font-mono text-black">{fmt(s.tax_total)}</span></div>
             <div className="flex justify-between font-bold text-base border-t border-black pt-2 mt-2">
-              <span>Total</span><span className="font-mono">₹{Number(s.total).toFixed(2)}</span>
+              <span>Total</span><span className="font-mono">{fmt(s.total)}</span>
             </div>
           </div>
         </div>
 
-        <div className="mt-10 text-xs text-gray-500">Thank you for your purchase. This is a system-generated receipt.</div>
+        <div className="mt-10 text-xs text-gray-500">{settings.receipt_footer_text || "Thank you for your purchase. This is a system-generated receipt."}</div>
       </div>
     </AppLayout>
   );

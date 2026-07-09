@@ -5,6 +5,7 @@ import { AppLayout } from "@/Layouts/AppLayout";
 import { Btn } from "@/Components/ui/Btn";
 import { Card } from "@/Components/ui/Card";
 import { Toast } from "@/Components/ui/Toast";
+import { useCurrency, useSettings } from "@/lib/settings";
 import type { Medicine } from "@/types";
 
 function Field({ label, required, error, children }: { label: string; required?: boolean; error?: string; children: React.ReactNode }) {
@@ -36,6 +37,8 @@ interface Props {
 }
 
 export default function AddMedicine({ medicine }: Props) {
+  const { fmt } = useCurrency();
+  const settings = useSettings();
   const isEdit = !!medicine;
   const [tab, setTab] = useState<"basic" | "pricing" | "stock">("basic");
   const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
@@ -56,13 +59,13 @@ export default function AddMedicine({ medicine }: Props) {
     purchase_price: medicine?.purchase_price ?? "",
     selling_price: medicine?.selling_price ?? "",
     mrp: medicine?.mrp ?? "",
-    tax: medicine?.tax ?? "0",
+    tax: medicine?.tax ?? String(Number(settings.default_tax_rate)),
     wholesale_price: medicine?.wholesale_price ?? "",
     discount: medicine?.discount ?? "0",
     batch_number: medicine?.batch_number ?? "",
     expiry_date: medicine?.expiry_date ?? "",
     stock: medicine?.stock ?? "",
-    reorder_level: medicine?.reorder_level ?? "",
+    reorder_level: medicine?.reorder_level ?? settings.low_stock_threshold,
     storage_location: medicine?.storage_location ?? "",
     temperature_storage: medicine?.temperature_storage ?? "",
     status: medicine?.status ?? "In Stock",
@@ -90,7 +93,7 @@ export default function AddMedicine({ medicine }: Props) {
   const margin = purchase > 0 ? (((selling - purchase) / purchase) * 100).toFixed(1) : "0";
 
   return (
-    <AppLayout notifCount={3}>
+    <AppLayout>
       <div className="p-5 max-w-4xl">
         {toast && <Toast message={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
         <div className="flex items-center gap-2 mb-5">
@@ -196,8 +199,8 @@ export default function AddMedicine({ medicine }: Props) {
                 <div className="col-span-2 p-3 bg-muted/50 rounded-md">
                   <div className="text-xs font-medium text-foreground mb-2">Margin Calculator</div>
                   <div className="grid grid-cols-3 gap-3 text-xs">
-                    <div><span className="text-muted-foreground">Purchase:</span> <span className="font-mono font-medium">₹{purchase.toFixed(2)}</span></div>
-                    <div><span className="text-muted-foreground">Selling:</span> <span className="font-mono font-medium">₹{selling.toFixed(2)}</span></div>
+                    <div><span className="text-muted-foreground">Purchase:</span> <span className="font-mono font-medium">{fmt(purchase)}</span></div>
+                    <div><span className="text-muted-foreground">Selling:</span> <span className="font-mono font-medium">{fmt(selling)}</span></div>
                     <div><span className="text-muted-foreground">Margin:</span> <span className="font-mono font-medium text-emerald-600">{margin}%</span></div>
                   </div>
                 </div>

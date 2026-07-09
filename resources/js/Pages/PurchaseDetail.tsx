@@ -8,9 +8,12 @@ import { TableHeader } from "@/Components/ui/TableHeader";
 import { Badge } from "@/Components/ui/Badge";
 import { Modal } from "@/Components/ui/Modal";
 import { Toast } from "@/Components/ui/Toast";
+import { useCurrency, useSettings } from "@/lib/settings";
 import type { PurchaseOrder } from "@/types";
 
 export default function PurchaseDetail({ order }: { order: PurchaseOrder }) {
+  const settings = useSettings();
+  const { fmt, fmtCompact } = useCurrency();
   const [receiveModal, setReceiveModal] = useState(false);
   const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
   const items = order.items ?? [];
@@ -36,7 +39,7 @@ export default function PurchaseDetail({ order }: { order: PurchaseOrder }) {
   };
 
   return (
-    <AppLayout notifCount={3}>
+    <AppLayout>
       <div className="p-5 max-w-4xl print:hidden">
         {toast && <Toast message={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
         <div className="flex items-center gap-2 mb-5">
@@ -57,7 +60,7 @@ export default function PurchaseDetail({ order }: { order: PurchaseOrder }) {
             ["Expected Delivery", order.expected_delivery ?? "—"],
             ["Invoice No.", order.invoice_number ?? "—"],
             ["Status", order.status],
-            ["Amount", `₹${Number(order.total).toLocaleString()}`],
+            ["Amount", fmtCompact(order.total)],
           ].map(([l, v]) => (
             <div key={l} className="bg-card border border-border rounded-lg p-3">
               <div className="text-xs text-muted-foreground mb-0.5">{l}</div>
@@ -77,9 +80,9 @@ export default function PurchaseDetail({ order }: { order: PurchaseOrder }) {
                   <td className="px-4 py-2.5 text-xs font-mono text-muted-foreground">{item.expiry_date}</td>
                   <td className="px-4 py-2.5 text-xs font-mono text-foreground">{item.quantity}</td>
                   <td className="px-4 py-2.5 text-xs font-mono text-foreground">{item.quantity_received} / {item.quantity}</td>
-                  <td className="px-4 py-2.5 text-xs font-mono text-foreground">₹{Number(item.unit_price).toFixed(2)}</td>
+                  <td className="px-4 py-2.5 text-xs font-mono text-foreground">{fmt(item.unit_price)}</td>
                   <td className="px-4 py-2.5 text-xs font-mono text-muted-foreground">{item.tax}%</td>
-                  <td className="px-4 py-2.5 text-xs font-mono font-semibold text-foreground">₹{Number(item.total).toFixed(2)}</td>
+                  <td className="px-4 py-2.5 text-xs font-mono font-semibold text-foreground">{fmt(item.total)}</td>
                 </tr>
               ))}
             </tbody>
@@ -128,10 +131,15 @@ export default function PurchaseDetail({ order }: { order: PurchaseOrder }) {
       {/* Printable invoice — only rendered visually when printing */}
       <div className="hidden print:block p-6">
         <div className="flex justify-between mb-6">
-          <div>
-            <div className="text-lg font-semibold text-black">PharmaPro Medical Store</div>
-            <div className="text-xs text-gray-600">123, MG Road, Mumbai</div>
-            <div className="text-xs text-gray-600">GST: 27AABCU9603R1ZX</div>
+          <div className="flex items-start gap-3">
+            {settings.receipt_show_logo && settings.logo_path && (
+              <img src={`/storage/${settings.logo_path}`} alt={settings.pharmacy_name} className="w-12 h-12 object-cover rounded" />
+            )}
+            <div>
+              <div className="text-lg font-semibold text-black">{settings.pharmacy_name}</div>
+              {settings.address && <div className="text-xs text-gray-600">{settings.address}</div>}
+              {settings.gst_number && <div className="text-xs text-gray-600">GST: {settings.gst_number}</div>}
+            </div>
           </div>
           <div className="text-right">
             <div className="text-sm font-bold text-black">PURCHASE INVOICE</div>
@@ -175,9 +183,9 @@ export default function PurchaseDetail({ order }: { order: PurchaseOrder }) {
                 <td className="py-2 font-mono text-gray-700">{item.batch_number}</td>
                 <td className="py-2 font-mono text-gray-700">{item.expiry_date}</td>
                 <td className="py-2 font-mono text-black text-right">{item.quantity}</td>
-                <td className="py-2 font-mono text-black text-right">₹{Number(item.unit_price).toFixed(2)}</td>
+                <td className="py-2 font-mono text-black text-right">{fmt(item.unit_price)}</td>
                 <td className="py-2 font-mono text-gray-700 text-right">{item.tax}%</td>
-                <td className="py-2 font-mono font-semibold text-black text-right">₹{Number(item.total).toFixed(2)}</td>
+                <td className="py-2 font-mono font-semibold text-black text-right">{fmt(item.total)}</td>
               </tr>
             ))}
           </tbody>
@@ -185,15 +193,15 @@ export default function PurchaseDetail({ order }: { order: PurchaseOrder }) {
 
         <div className="flex justify-end">
           <div className="w-64 space-y-1.5 text-sm border-t-2 border-black pt-2">
-            <div className="flex justify-between"><span className="text-gray-600">Subtotal</span><span className="font-mono text-black">₹{Number(order.subtotal).toFixed(2)}</span></div>
-            <div className="flex justify-between"><span className="text-gray-600">Tax</span><span className="font-mono text-black">₹{Number(order.tax_total).toFixed(2)}</span></div>
+            <div className="flex justify-between"><span className="text-gray-600">Subtotal</span><span className="font-mono text-black">{fmt(order.subtotal)}</span></div>
+            <div className="flex justify-between"><span className="text-gray-600">Tax</span><span className="font-mono text-black">{fmt(order.tax_total)}</span></div>
             <div className="flex justify-between font-bold text-base border-t border-black pt-2 mt-2">
-              <span>Total</span><span className="font-mono">₹{Number(order.total).toFixed(2)}</span>
+              <span>Total</span><span className="font-mono">{fmt(order.total)}</span>
             </div>
           </div>
         </div>
 
-        <div className="mt-10 text-xs text-gray-500">This is a system-generated purchase invoice.</div>
+        <div className="mt-10 text-xs text-gray-500">{settings.receipt_footer_text || "This is a system-generated purchase invoice."}</div>
       </div>
     </AppLayout>
   );

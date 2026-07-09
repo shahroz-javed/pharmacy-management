@@ -161,21 +161,23 @@ Renders `Users.tsx` from mock data. Only the base `users` table exists (for auth
 
 Backed by `App\Http\Controllers\NotificationController` and `App\Models\NotificationState` (`notification_states` table, migration `2026_07_09_065418_create_notification_states_table`). There's no notifications table storing events — each type is computed live every request (same read-only-aggregation approach as `ReportController`): Low Stock / Out of Stock from `Medicine::status`, Medicine Expiring from `Medicine::expiry_date` within 90 days (including already-expired), Pending Payments from `Supplier::outstanding_balance` > 0, New Purchase from `PurchaseOrder`s created in the last 7 days. Each notification gets a stable id like `low-stock-{medicine_id}`; `notification_states` stores per-user `read_at` so read state persists across requests without a real events log. `POST /notifications/{key}/read` marks one read, `POST /notifications/read-all` marks every currently-generated notification read. The unread count is shared globally via `HandleInertiaRequests` as the `notifCount` Inertia prop, read by `AppLayout`/`TopBar`'s bell icon on every page (previously hardcoded to `3`). Covered by [tests/Feature/NotificationTest.php](tests/Feature/NotificationTest.php) (9 tests).
 
-### 14. Settings — Static (UI only)
-- [ ] Business Information
-- [ ] Pharmacy Logo
-- [ ] GST/VAT
-- [ ] Receipt Template
-- [ ] POS Settings
-- [ ] Currency
-- [ ] Language
-- [ ] Backup
-- [ ] Printer Settings
-- [ ] Barcode Settings
-- [ ] Theme
+### 14. Settings — Dynamic
+- [x] Business Information [Applied to: printed receipts/invoices/labels (SaleDetail, PurchaseDetail, MedicineDetail) and every page via the shared `settings` Inertia prop]
+- [x] Pharmacy Logo [Applied to: receipt/invoice header when "Show logo on receipt" is on]
+- [x] GST/VAT [Applied to: printed receipt/invoice header]
+- [x] Receipt Template [Applied to: SaleDetail/PurchaseDetail printable footer text]
+- [x] POS Settings [Applied to: default tax rate + reorder level prefilled on Add Medicine]
+- [x] Currency [Applied to: every ₹ amount app-wide via `useCurrency()`]
+- [x] Language [Not applied — stored but no i18n/translation layer exists yet]
+- [x] Backup [Applied to: `GET /settings/backup` download]
+- [x] Printer Settings [Not applied — no server-side/native print pipeline to target a named printer; the app still uses `window.print()`]
+- [x] Barcode Settings [Not applied — POS/medicine barcode fields are free-text lookups, not a generated-barcode renderer]
+- [x] Theme [Applied to: color (Blue/Green/Violet) and font size, live app-wide via CSS custom properties in `AppLayout`]
 
-Renders `SettingsPage.tsx` from mock data. No settings table/controller yet.
+Backed by `App\Models\Setting`, `App\Http\Controllers\SettingController`, `settings` table (migration `2026_07_09_071112_create_settings_table`). There's exactly one row — `Setting::current()` is a singleton accessor used by the controller — since a single pharmacy only needs one active configuration, not a per-user or versioned settings table. `GET /settings` renders it, `PUT /settings` validates and saves (logo upload follows the same `Storage::disk('public')` + delete-old-then-store-new pattern as `Medicine::image_path`). **Backup**: `GET /settings/backup` streams a JSON snapshot of every business table (`response()->streamDownload`, no new dependency, mirrors the CSV export approach in `ReportController`). Covered by [tests/Feature/SettingTest.php](tests/Feature/SettingTest.php) (7 tests).
+
+**App-wide wiring**: `settings` is shared globally via `HandleInertiaRequests` (alongside `notifCount`), so every page can read it without prop drilling. `resources/js/lib/settings.ts` exposes `useSettings()` and `useCurrency()` (`fmt`/`fmtCompact`/`symbol`) — every hardcoded `₹` literal across all Pages was replaced with these, so switching Currency in Settings changes the symbol everywhere immediately (INR ₹ / USD $ / EUR €; only display formatting, no FX conversion). `AppLayout` applies `theme_color`/`font_size` live by overriding the `--primary`/`--ring`/`--sidebar-*`/`--accent`/`--font-size` CSS custom properties already defined in `resources/css/app.css`, on top of the existing light/dark toggle. `SaleDetail.tsx`/`PurchaseDetail.tsx`'s printable receipt/invoice and `MedicineDetail.tsx`'s printable label now pull real business name/address/GST/logo instead of the old hardcoded "PharmaPro Medical Store" text, and the receipt/invoice footer uses `receipt_footer_text` when set. `AddMedicine.tsx` prefills a new medicine's tax and reorder level from `default_tax_rate`/`low_stock_threshold` (existing medicines keep their own values on edit). Language, Printer, and Barcode settings are persisted and editable but not yet wired to any behavior — there's no translation layer, native print-target selection, or barcode image generation in the app to plug them into.
 
 ## Suggested order for making remaining modules dynamic
 
-Users/Roles is the natural next step (needed before any real permission gating), then Settings.
+Users/Roles is the last module still static (needed before any real permission gating).

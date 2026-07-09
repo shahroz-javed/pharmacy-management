@@ -12,6 +12,7 @@ import { PageHeader } from "@/Components/ui/PageHeader";
 import { StatCard } from "@/Components/ui/StatCard";
 import { TableHeader } from "@/Components/ui/TableHeader";
 import { EmptyState } from "@/Components/ui/EmptyState";
+import { useCurrency } from "@/lib/settings";
 import type { ReportData, ReportType } from "@/types";
 
 interface Props {
@@ -101,8 +102,8 @@ const chartTitles: Partial<Record<ReportType, string>> = {
   monthly: "Monthly Sales Trend",
 };
 
-function formatValue(value: number, format?: "money" | "number" | "percent"): string {
-  if (format === "money") return `₹${value.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
+function formatValue(symbol: string, value: number, format?: "money" | "number" | "percent"): string {
+  if (format === "money") return `${symbol}${value.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
   if (format === "percent") return `${value}%`;
   return value.toLocaleString();
 }
@@ -111,10 +112,10 @@ function titleCase(key: string): string {
   return key.split("_").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
 }
 
-function formatCell(key: string, value: string | number): string {
+function formatCell(symbol: string, key: string, value: string | number): string {
   if (typeof value === "number") {
     if (/(total|revenue|profit|cost|value|sales|tax|amount)/i.test(key) && !/count|units|transactions|orders|days/i.test(key)) {
-      return `₹${value.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
+      return `${symbol}${value.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
     }
     return value.toLocaleString();
   }
@@ -122,6 +123,7 @@ function formatCell(key: string, value: string | number): string {
 }
 
 export default function Reports({ reportType, period, from, to, data }: Props) {
+  const { symbol } = useCurrency();
   const [customFrom, setCustomFrom] = useState(from);
   const [customTo, setCustomTo] = useState(to);
 
@@ -134,7 +136,7 @@ export default function Reports({ reportType, period, from, to, data }: Props) {
   const chartTitle = chartTitles[reportType];
 
   return (
-    <AppLayout notifCount={3}>
+    <AppLayout>
       <div className="p-5">
         <PageHeader
           title="Reports"
@@ -182,7 +184,7 @@ export default function Reports({ reportType, period, from, to, data }: Props) {
               {stats.length > 0 && (
                 <div className="grid grid-cols-4 gap-3">
                   {stats.map(s => (
-                    <StatCard key={s.key} label={s.label} value={formatValue(data.stats[s.key] ?? 0, s.format)} icon={s.icon} color={s.color} />
+                    <StatCard key={s.key} label={s.label} value={formatValue(symbol, data.stats[s.key] ?? 0, s.format)} icon={s.icon} color={s.color} />
                   ))}
                 </div>
               )}
@@ -194,8 +196,8 @@ export default function Reports({ reportType, period, from, to, data }: Props) {
                     <BarChart data={data.chart}>
                       <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.06)" />
                       <XAxis dataKey="date" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
-                      <YAxis tick={{ fontSize: 11 }} tickLine={false} axisLine={false} tickFormatter={v => `₹${(v / 1000).toFixed(0)}k`} />
-                      <Tooltip formatter={(v: number) => [`₹${v.toLocaleString()}`, ""]} />
+                      <YAxis tick={{ fontSize: 11 }} tickLine={false} axisLine={false} tickFormatter={v => `${symbol}${(v / 1000).toFixed(0)}k`} />
+                      <Tooltip formatter={(v: number) => [`${symbol}${v.toLocaleString()}`, ""]} />
                       <Bar dataKey="sales" fill="#1a56db" radius={[3, 3, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
@@ -216,7 +218,7 @@ export default function Reports({ reportType, period, from, to, data }: Props) {
                         {data.rows.map((row, i) => (
                           <tr key={i} className="border-b border-border last:border-0 hover:bg-muted/30">
                             {rowKeys.map(key => (
-                              <td key={key} className="px-4 py-2.5 text-xs font-mono text-foreground whitespace-nowrap">{formatCell(key, row[key])}</td>
+                              <td key={key} className="px-4 py-2.5 text-xs font-mono text-foreground whitespace-nowrap">{formatCell(symbol, key, row[key])}</td>
                             ))}
                           </tr>
                         ))}

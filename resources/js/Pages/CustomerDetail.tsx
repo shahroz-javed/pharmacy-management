@@ -9,9 +9,11 @@ import { Badge } from "@/Components/ui/Badge";
 import { EmptyState } from "@/Components/ui/EmptyState";
 import { Modal } from "@/Components/ui/Modal";
 import { Toast } from "@/Components/ui/Toast";
+import { useCurrency } from "@/lib/settings";
 import type { Customer } from "@/types";
 
 export default function CustomerDetail({ customer: c }: { customer: Customer }) {
+  const { fmtCompact } = useCurrency();
   const [editModal, setEditModal] = useState(false);
   const [payModal, setPayModal] = useState(false);
   const [loyaltyModal, setLoyaltyModal] = useState(false);
@@ -64,7 +66,7 @@ export default function CustomerDetail({ customer: c }: { customer: Customer }) 
   };
 
   return (
-    <AppLayout notifCount={3}>
+    <AppLayout>
       <div className="p-5 max-w-4xl">
         {toast && <Toast message={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
         <div className="flex items-center gap-2 mb-5">
@@ -102,7 +104,7 @@ export default function CustomerDetail({ customer: c }: { customer: Customer }) 
             </Card>
             <Card className="p-4">
               <div className="text-xs text-muted-foreground mb-0.5">Credit Balance</div>
-              <div className={`text-2xl font-mono font-bold ${credit > 0 ? "text-red-600" : "text-emerald-600"}`}>₹{credit.toLocaleString()}</div>
+              <div className={`text-2xl font-mono font-bold ${credit > 0 ? "text-red-600" : "text-emerald-600"}`}>{fmtCompact(credit)}</div>
               <Btn variant="primary" size="sm" className="w-full justify-center mt-3" onClick={() => setPayModal(true)} disabled={credit <= 0}><DollarSign size={13} />Record Payment</Btn>
             </Card>
           </div>
@@ -146,7 +148,7 @@ export default function CustomerDetail({ customer: c }: { customer: Customer }) 
                 {payments.map(p => (
                   <tr key={p.id} className="border-b border-border last:border-0 hover:bg-muted/30">
                     <td className="px-4 py-2.5 text-xs font-mono text-muted-foreground">{p.created_at}</td>
-                    <td className="px-4 py-2.5 text-xs font-mono font-semibold text-foreground">₹{Number(p.amount).toLocaleString()}</td>
+                    <td className="px-4 py-2.5 text-xs font-mono font-semibold text-foreground">{fmtCompact(p.amount)}</td>
                     <td className="px-4 py-2.5 text-xs text-muted-foreground">{p.method}</td>
                     <td className="px-4 py-2.5 text-xs text-muted-foreground">{p.user?.name ?? "—"}</td>
                     <td className="px-4 py-2.5 text-xs text-muted-foreground">{p.notes ?? "—"}</td>
@@ -194,7 +196,7 @@ export default function CustomerDetail({ customer: c }: { customer: Customer }) 
         <Modal open={payModal} onClose={() => setPayModal(false)} title="Record Payment">
           <div className="p-5 space-y-4">
             <div className="p-3 bg-muted/50 rounded-md text-xs text-muted-foreground">
-              Outstanding balance: <span className="font-mono font-semibold text-foreground">₹{credit.toLocaleString()}</span>
+              Outstanding balance: <span className="font-mono font-semibold text-foreground">{fmtCompact(credit)}</span>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>

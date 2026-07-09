@@ -4,15 +4,18 @@ import { AppLayout } from "@/Layouts/AppLayout";
 import { Btn } from "@/Components/ui/Btn";
 import { Card } from "@/Components/ui/Card";
 import { Badge } from "@/Components/ui/Badge";
+import { useCurrency, useSettings } from "@/lib/settings";
 import type { Medicine } from "@/types";
 
 export default function MedicineDetail({ medicine: m }: { medicine: Medicine }) {
+  const settings = useSettings();
+  const { fmt } = useCurrency();
   const purchase = Number(m.purchase_price);
   const selling = Number(m.selling_price);
   const margin = purchase > 0 ? (((selling - purchase) / purchase) * 100).toFixed(1) : "0.0";
 
   return (
-    <AppLayout notifCount={3}>
+    <AppLayout>
       <div className="p-5 max-w-4xl print:hidden">
         <div className="flex items-center gap-2 mb-5">
           <Link href="/medicines" className="text-muted-foreground hover:text-foreground"><ChevronLeft size={18} /></Link>
@@ -45,11 +48,11 @@ export default function MedicineDetail({ medicine: m }: { medicine: Medicine }) 
             <Card className="p-4">
               <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Pricing</h3>
               <div className="grid grid-cols-3 gap-4 text-sm">
-                <div><span className="text-xs text-muted-foreground block mb-0.5">Purchase Price</span><span className="font-mono font-semibold text-foreground">₹{purchase.toFixed(2)}</span></div>
-                <div><span className="text-xs text-muted-foreground block mb-0.5">Selling Price</span><span className="font-mono font-semibold text-primary">₹{selling.toFixed(2)}</span></div>
+                <div><span className="text-xs text-muted-foreground block mb-0.5">Purchase Price</span><span className="font-mono font-semibold text-foreground">{fmt(purchase)}</span></div>
+                <div><span className="text-xs text-muted-foreground block mb-0.5">Selling Price</span><span className="font-mono font-semibold text-primary">{fmt(selling)}</span></div>
                 <div><span className="text-xs text-muted-foreground block mb-0.5">Margin</span><span className="font-mono font-semibold text-emerald-600">{margin}%</span></div>
-                {m.mrp && <div><span className="text-xs text-muted-foreground block mb-0.5">MRP</span><span className="font-mono font-semibold text-foreground">₹{Number(m.mrp).toFixed(2)}</span></div>}
-                {m.wholesale_price && <div><span className="text-xs text-muted-foreground block mb-0.5">Wholesale Price</span><span className="font-mono font-semibold text-foreground">₹{Number(m.wholesale_price).toFixed(2)}</span></div>}
+                {m.mrp && <div><span className="text-xs text-muted-foreground block mb-0.5">MRP</span><span className="font-mono font-semibold text-foreground">{fmt(m.mrp)}</span></div>}
+                {m.wholesale_price && <div><span className="text-xs text-muted-foreground block mb-0.5">Wholesale Price</span><span className="font-mono font-semibold text-foreground">{fmt(m.wholesale_price)}</span></div>}
                 <div><span className="text-xs text-muted-foreground block mb-0.5">Discount</span><span className="font-mono font-semibold text-foreground">{Number(m.discount).toFixed(1)}%</span></div>
               </div>
             </Card>
@@ -79,6 +82,7 @@ export default function MedicineDetail({ medicine: m }: { medicine: Medicine }) 
       {/* Printable label — only rendered visually when printing */}
       <div className="hidden print:block p-6">
         <div className="border-2 border-black rounded-md p-4 w-80 font-mono">
+          <div className="text-xs font-semibold mb-1">{settings.pharmacy_name}</div>
           <div className="text-base font-bold mb-1">{m.name}</div>
           <div className="text-xs mb-2">{m.generic_name}</div>
           <div className="text-xs space-y-0.5">
@@ -87,7 +91,7 @@ export default function MedicineDetail({ medicine: m }: { medicine: Medicine }) 
             <div>Expiry: {m.expiry_date}</div>
             {m.manufacturer && <div>Mfr: {m.manufacturer}</div>}
           </div>
-          <div className="text-lg font-bold mt-2">₹{selling.toFixed(2)}</div>
+          <div className="text-lg font-bold mt-2">{fmt(selling)}</div>
         </div>
       </div>
     </AppLayout>

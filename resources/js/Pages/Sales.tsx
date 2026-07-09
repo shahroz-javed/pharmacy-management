@@ -11,6 +11,7 @@ import { Toolbar } from "@/Components/ui/Toolbar";
 import { TableHeader } from "@/Components/ui/TableHeader";
 import { Badge } from "@/Components/ui/Badge";
 import { EmptyState } from "@/Components/ui/EmptyState";
+import { useCurrency } from "@/lib/settings";
 import type { Sale } from "@/types";
 
 interface Props {
@@ -24,6 +25,7 @@ interface Props {
 }
 
 export default function Sales({ sales, stats, filters }: Props) {
+  const { fmt, fmtCompact } = useCurrency();
   const [search, setSearch] = useState(filters.search ?? "");
   const [status, setStatus] = useState(filters.status ?? "All");
   const [paymentMethod, setPaymentMethod] = useState(filters.payment_method ?? "All");
@@ -37,7 +39,7 @@ export default function Sales({ sales, stats, filters }: Props) {
   const netSales = stats.week_total - stats.returns_total;
 
   return (
-    <AppLayout notifCount={3}>
+    <AppLayout>
       <div className="p-5">
         <PageHeader
           title="Sales History"
@@ -52,10 +54,10 @@ export default function Sales({ sales, stats, filters }: Props) {
           }
         />
         <div className="grid grid-cols-4 gap-3 mb-5">
-          <StatCard label="Today" value={`₹${stats.today_total.toLocaleString()}`} sub={`${stats.today_count} sales`} icon={<Activity size={16} className="text-blue-600" />} color="bg-blue-50 dark:bg-blue-950/20" />
-          <StatCard label="This Week" value={`₹${stats.week_total.toLocaleString()}`} sub={`${stats.week_count} sales`} icon={<TrendingUp size={16} className="text-emerald-600" />} color="bg-emerald-50 dark:bg-emerald-950/20" />
-          <StatCard label="Returns" value={`₹${stats.returns_total.toLocaleString()}`} sub={`${stats.returns_count} returns`} icon={<RefreshCw size={16} className="text-amber-600" />} color="bg-amber-50 dark:bg-amber-950/20" />
-          <StatCard label="Net Sales" value={`₹${netSales.toLocaleString()}`} icon={<DollarSign size={16} className="text-violet-600" />} color="bg-violet-50 dark:bg-violet-950/20" />
+          <StatCard label="Today" value={fmtCompact(stats.today_total)} sub={`${stats.today_count} sales`} icon={<Activity size={16} className="text-blue-600" />} color="bg-blue-50 dark:bg-blue-950/20" />
+          <StatCard label="This Week" value={fmtCompact(stats.week_total)} sub={`${stats.week_count} sales`} icon={<TrendingUp size={16} className="text-emerald-600" />} color="bg-emerald-50 dark:bg-emerald-950/20" />
+          <StatCard label="Returns" value={fmtCompact(stats.returns_total)} sub={`${stats.returns_count} returns`} icon={<RefreshCw size={16} className="text-amber-600" />} color="bg-amber-50 dark:bg-amber-950/20" />
+          <StatCard label="Net Sales" value={fmtCompact(netSales)} icon={<DollarSign size={16} className="text-violet-600" />} color="bg-violet-50 dark:bg-violet-950/20" />
         </div>
         <Toolbar>
           <SearchInput placeholder="Search invoice, customer…" value={search} onChange={v => { setSearch(v); applyFilters({ search: v }); }} />
@@ -94,9 +96,9 @@ export default function Sales({ sales, stats, filters }: Props) {
                     <td className="px-4 py-2.5 text-sm text-foreground">{s.customer?.name ?? "Walk-in"}</td>
                     <td className="px-4 py-2.5 text-xs font-mono text-muted-foreground">{s.sold_at ? new Date(s.sold_at).toLocaleString() : "—"}</td>
                     <td className="px-4 py-2.5 text-xs text-muted-foreground">{s.items_count ?? 0}</td>
-                    <td className="px-4 py-2.5 text-xs font-mono text-foreground">₹{Number(s.subtotal).toFixed(2)}</td>
-                    <td className="px-4 py-2.5 text-xs font-mono text-muted-foreground">₹{Number(s.tax_total).toFixed(2)}</td>
-                    <td className="px-4 py-2.5 text-sm font-mono font-semibold text-foreground">₹{Number(s.total).toFixed(2)}</td>
+                    <td className="px-4 py-2.5 text-xs font-mono text-foreground">{fmt(s.subtotal)}</td>
+                    <td className="px-4 py-2.5 text-xs font-mono text-muted-foreground">{fmt(s.tax_total)}</td>
+                    <td className="px-4 py-2.5 text-sm font-mono font-semibold text-foreground">{fmt(s.total)}</td>
                     <td className="px-4 py-2.5 text-xs text-muted-foreground">{s.payment_method}</td>
                     <td className="px-4 py-2.5"><Badge status={s.status} /></td>
                     <td className="px-4 py-2.5">

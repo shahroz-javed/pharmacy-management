@@ -9,9 +9,11 @@ import { Badge } from "@/Components/ui/Badge";
 import { EmptyState } from "@/Components/ui/EmptyState";
 import { Modal } from "@/Components/ui/Modal";
 import { Toast } from "@/Components/ui/Toast";
+import { useCurrency } from "@/lib/settings";
 import type { Supplier } from "@/types";
 
 export default function SupplierDetail({ supplier: s }: { supplier: Supplier }) {
+  const { fmtCompact } = useCurrency();
   const [payModal, setPayModal] = useState(false);
   const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
   const balance = Number(s.outstanding_balance);
@@ -33,7 +35,7 @@ export default function SupplierDetail({ supplier: s }: { supplier: Supplier }) 
   };
 
   return (
-    <AppLayout notifCount={3}>
+    <AppLayout>
       <div className="p-5 max-w-4xl">
         {toast && <Toast message={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
         <div className="flex items-center gap-2 mb-5">
@@ -50,7 +52,7 @@ export default function SupplierDetail({ supplier: s }: { supplier: Supplier }) 
             <div className="grid grid-cols-2 gap-4 text-sm">
               {[
                 ["Contact Person", s.contact_person ?? "—"], ["Phone", s.phone ?? "—"], ["Email", s.email ?? "—"],
-                ["City", s.city ?? "—"], ["Total Orders", String(orders.length)], ["Outstanding Balance", `₹${balance.toLocaleString()}`],
+                ["City", s.city ?? "—"], ["Total Orders", String(orders.length)], ["Outstanding Balance", fmtCompact(balance)],
               ].map(([l, v]) => (
                 <div key={l}><span className="text-xs text-muted-foreground block mb-0.5">{l}</span><span className="font-medium text-foreground">{v}</span></div>
               ))}
@@ -58,7 +60,7 @@ export default function SupplierDetail({ supplier: s }: { supplier: Supplier }) 
           </Card>
           <Card className="p-4">
             <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Balance</div>
-            <div className="text-3xl font-mono font-bold text-foreground">₹{balance.toLocaleString()}</div>
+            <div className="text-3xl font-mono font-bold text-foreground">{fmtCompact(balance)}</div>
             <div className="text-xs text-muted-foreground mb-4">outstanding</div>
             <Btn variant="primary" size="sm" className="w-full justify-center" onClick={() => setPayModal(true)} disabled={balance <= 0}><DollarSign size={13} />Record Payment</Btn>
           </Card>
@@ -76,7 +78,7 @@ export default function SupplierDetail({ supplier: s }: { supplier: Supplier }) 
                     <td className="px-4 py-2.5 text-xs font-mono text-primary">{po.po_number}</td>
                     <td className="px-4 py-2.5 text-xs font-mono text-muted-foreground">{po.order_date}</td>
                     <td className="px-4 py-2.5 text-xs text-muted-foreground">{po.items_count ?? 0} items</td>
-                    <td className="px-4 py-2.5 text-xs font-mono font-semibold text-foreground">₹{Number(po.total).toLocaleString()}</td>
+                    <td className="px-4 py-2.5 text-xs font-mono font-semibold text-foreground">{fmtCompact(po.total)}</td>
                     <td className="px-4 py-2.5"><Badge status={po.status} /></td>
                   </tr>
                 ))}
@@ -88,7 +90,7 @@ export default function SupplierDetail({ supplier: s }: { supplier: Supplier }) 
         <Modal open={payModal} onClose={() => setPayModal(false)} title="Record Payment">
           <div className="p-5 space-y-4">
             <div className="p-3 bg-muted/50 rounded-md text-xs text-muted-foreground">
-              Outstanding balance: <span className="font-mono font-semibold text-foreground">₹{balance.toLocaleString()}</span>
+              Outstanding balance: <span className="font-mono font-semibold text-foreground">{fmtCompact(balance)}</span>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -108,7 +110,7 @@ export default function SupplierDetail({ supplier: s }: { supplier: Supplier }) 
                 <label className="text-xs font-medium text-foreground block mb-1.5">Against Purchase Order</label>
                 <select value={data.purchase_order_id} onChange={e => setData("purchase_order_id", e.target.value)} className="w-full px-3 py-2 text-sm border border-border rounded-md bg-input-background focus:outline-none">
                   <option value="">General payment (not tied to a PO)</option>
-                  {orders.map(po => <option key={po.id} value={po.id}>{po.po_number} — ₹{Number(po.total).toLocaleString()}</option>)}
+                  {orders.map(po => <option key={po.id} value={po.id}>{po.po_number} — {fmtCompact(po.total)}</option>)}
                 </select>
               </div>
             )}

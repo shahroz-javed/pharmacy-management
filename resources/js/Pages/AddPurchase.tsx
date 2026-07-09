@@ -6,6 +6,7 @@ import { Btn } from "@/Components/ui/Btn";
 import { Card } from "@/Components/ui/Card";
 import { TableHeader } from "@/Components/ui/TableHeader";
 import { Toast } from "@/Components/ui/Toast";
+import { useCurrency } from "@/lib/settings";
 import type { Medicine, Supplier } from "@/types";
 
 interface Props {
@@ -27,6 +28,7 @@ function emptyItem(defaultPrice = ""): ItemRow {
 }
 
 export default function AddPurchase({ suppliers, medicines }: Props) {
+  const { fmt } = useCurrency();
   const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
 
   const { data, setData, post, processing, errors } = useForm({
@@ -65,7 +67,7 @@ export default function AddPurchase({ suppliers, medicines }: Props) {
   };
 
   return (
-    <AppLayout notifCount={3}>
+    <AppLayout>
       <div className="p-5 max-w-5xl">
         {toast && <Toast message={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
         <div className="flex items-center gap-2 mb-5">
@@ -104,10 +106,10 @@ export default function AddPurchase({ suppliers, medicines }: Props) {
             <div className="text-xs font-semibold text-foreground mb-3">Order Summary</div>
             <div className="space-y-2 text-sm">
               <div className="flex justify-between"><span className="text-muted-foreground">Items</span><span className="font-mono">{items.length}</span></div>
-              <div className="flex justify-between"><span className="text-muted-foreground">Subtotal</span><span className="font-mono">₹{subtotal.toFixed(2)}</span></div>
-              <div className="flex justify-between"><span className="text-muted-foreground">Tax</span><span className="font-mono">₹{taxTotal.toFixed(2)}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Subtotal</span><span className="font-mono">{fmt(subtotal)}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Tax</span><span className="font-mono">{fmt(taxTotal)}</span></div>
               <div className="h-px bg-border" />
-              <div className="flex justify-between font-semibold"><span>Total</span><span className="font-mono text-primary">₹{total.toFixed(2)}</span></div>
+              <div className="flex justify-between font-semibold"><span>Total</span><span className="font-mono text-primary">{fmt(total)}</span></div>
             </div>
           </Card>
         </div>
@@ -143,7 +145,7 @@ export default function AddPurchase({ suppliers, medicines }: Props) {
                       <option value={0}>0%</option><option value={5}>5%</option><option value={12}>12%</option><option value={18}>18%</option>
                     </select>
                   </td>
-                  <td className="px-3 py-2.5 text-sm font-mono font-medium text-foreground">₹{lineTotal(item).toFixed(2)}</td>
+                  <td className="px-3 py-2.5 text-sm font-mono font-medium text-foreground">{fmt(lineTotal(item))}</td>
                   <td className="px-3 py-2.5"><button onClick={() => removeItem(i)} className="p-1 text-muted-foreground hover:text-red-600"><X size={13} /></button></td>
                 </tr>
               ))}

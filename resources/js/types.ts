@@ -274,6 +274,31 @@ export interface ReportData {
   rows: Record<string, string | number>[];
 }
 
+export interface Setting {
+  id: number;
+  pharmacy_name: string;
+  license_number: string | null;
+  gst_number: string | null;
+  phone: string | null;
+  email: string | null;
+  website: string | null;
+  address: string | null;
+  logo_path: string | null;
+  currency: string;
+  language: string;
+  default_tax_rate: string;
+  low_stock_threshold: number;
+  allow_negative_stock: boolean;
+  receipt_footer_text: string | null;
+  receipt_show_logo: boolean;
+  printer_name: string | null;
+  paper_size: string;
+  barcode_prefix: string | null;
+  barcode_format: string;
+  theme_color: string;
+  font_size: string;
+}
+
 export type NotificationType = "warning" | "danger" | "info" | "success";
 
 export interface Notification {

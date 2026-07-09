@@ -14,6 +14,7 @@ import { Badge } from "@/Components/ui/Badge";
 import { EmptyState } from "@/Components/ui/EmptyState";
 import { Modal } from "@/Components/ui/Modal";
 import { Toast } from "@/Components/ui/Toast";
+import { useCurrency } from "@/lib/settings";
 import type { Medicine } from "@/types";
 
 interface Props {
@@ -23,6 +24,7 @@ interface Props {
 }
 
 export default function Medicines({ medicines, categories, filters }: Props) {
+  const { fmt } = useCurrency();
   const [search, setSearch] = useState(filters.search ?? "");
   const [category, setCategory] = useState(filters.category ?? "All");
   const [statusFilter, setStatusFilter] = useState(filters.status ?? "All");
@@ -52,7 +54,7 @@ export default function Medicines({ medicines, categories, filters }: Props) {
   };
 
   return (
-    <AppLayout notifCount={3}>
+    <AppLayout>
       <div className="p-5">
         {toast && <Toast message={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
         <PageHeader
@@ -123,8 +125,8 @@ export default function Medicines({ medicines, categories, filters }: Props) {
                   </td>
                   <td className="px-4 py-2.5 text-sm font-mono font-medium text-foreground">{m.stock}</td>
                   <td className="px-4 py-2.5 text-xs font-mono text-muted-foreground">{m.reorder_level}</td>
-                  <td className="px-4 py-2.5 text-xs font-mono text-foreground">₹{Number(m.purchase_price).toFixed(2)}</td>
-                  <td className="px-4 py-2.5 text-xs font-mono font-medium text-foreground">₹{Number(m.selling_price).toFixed(2)}</td>
+                  <td className="px-4 py-2.5 text-xs font-mono text-foreground">{fmt(m.purchase_price)}</td>
+                  <td className="px-4 py-2.5 text-xs font-mono font-medium text-foreground">{fmt(m.selling_price)}</td>
                   <td className="px-4 py-2.5"><Badge status={m.status} /></td>
                   <td className="px-4 py-2.5">
                     <div className="flex items-center gap-1">
